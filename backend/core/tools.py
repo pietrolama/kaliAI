@@ -72,6 +72,9 @@ from backend.core.graph_manager import (
 # Step generation
 from backend.core.steps import generate_deep_steps
 
+# Psyche
+from backend.core.psyche import get_psyche
+
 # ============================================================================
 # BACKWARD COMPATIBILITY WRAPPERS
 # ============================================================================
@@ -127,9 +130,15 @@ def execute_python_code(code: str, timeout: int = 90) -> str:
         except OSError:
             pass
 
+from backend.core.execution.python_sandbox import execute_python_sandboxed
+
+# Wrapper registrabile
 def execute_python_code_tool(code: str) -> str:
-    """Wrapper registrabile per ghostbrain_autogen."""
-    return execute_python_code(code)
+    """
+    Esegue codice Python in una sandbox isolata (Podman). 
+    Previene operazioni pericolose e protegge il sistema host.
+    """
+    return execute_python_sandboxed(code)
 
 def graph_summary_tool(limit_nodes: int = 15, limit_edges: int = 25) -> str:
     return get_graph_summary_text(limit_nodes=limit_nodes, limit_edges=limit_edges)
@@ -183,6 +192,45 @@ def analyze_firmware(file_path: str, extract: bool = True) -> str:
 
 def analyze_firmware_tool(file_path: str) -> str:
     return analyze_firmware(file_path)
+
+# === VISION TOOLS ===
+from backend.core.vision import browse_url, analyze_screenshot
+
+def visual_browse_tool(url: str, specific_query: str = None) -> str:
+    """
+    Naviga visivamente su un URL, cattura screenshot e lo analizza con Vision AI.
+    Restituisce descrizione visiva + snippet HTML.
+    Useful for: Login forms, captcha detection, visual anomalies, RDP/VNC web clients.
+    """
+    if not url.startswith("http"):
+        url = "http://" + url
+        
+    try:
+        # 1. Naviga e cattura
+        result = browse_url(url)
+        
+        if result['status'] == 'error':
+            return f"[VISION][ERRORE] Navigazione fallita: {result['error']}"
+            
+        # 2. Analizza immagine (se query specifica fornita, usala)
+        prompt = specific_query if specific_query else "Descrivi l'interfaccia, identifica tecnologie, versioni e potenziali vettori di attacco (input, form, versioni visibili)."
+        vision_analysis = analyze_screenshot(result['image'], prompt=prompt)
+        
+        output = f"""
+[VISION ANALYSIS]
+URL: {result['url']}
+Title: {result['title']}
+
+👁️ AI VISUAL OVERVIEW:
+{vision_analysis}
+
+📄 HTML SNIPPET (First 5k chars):
+{result['html_snippet']}
+"""
+        return output
+        
+    except Exception as e:
+        return f"[VISION][CRITICO] Errore tool: {e}"
 
 # ============================================================================
 # FUNZIONI NON SPOSTATE (RAG, Chat History, Step Execution)
@@ -471,6 +519,7 @@ NON usare altri IP dal contesto, anche se presenti.
                 
                 if result['success']:
                     log_info(f"[STEP-BY-STEP] ✅ Step {i} completato con successo")
+                    get_psyche().stimulate(0.05) # Boost dopamina per successo
                     
                     # 🎯 PRINCIPIO DI INCERTEZZA: Verifica confidenza identificazione target (solo step 1)
                     if i == 1 and not confirmed_target_ip_local:

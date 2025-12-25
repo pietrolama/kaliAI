@@ -1,0 +1,28 @@
+FROM kalilinux/kali-rolling
+
+# Update and install dependencies
+# We install python3, minimal network tools, and offensive libs
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-scapy \
+    python3-requests \
+    python3-pwntools \
+    nmap \
+    netcat-traditional \
+    curl \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for the script execution within the container
+# (Defense in depth: even if they break out of python, they are not root inside container)
+RUN useradd -m -s /bin/bash executor
+
+# Set working directory
+WORKDIR /home/executor
+
+# Switch to non-root user
+USER executor
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]

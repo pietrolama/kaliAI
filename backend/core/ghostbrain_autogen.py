@@ -18,6 +18,7 @@ from backend.core.tools import (
     graph_summary_tool,
     graph_paths_tool,
     analyze_firmware_tool,
+    visual_browse_tool,
     recall_from_vectordb,
     add_memory_to_vectordb
 )
@@ -133,6 +134,14 @@ GhostBrain_AI_Assistant.register_for_execution(
 GhostBrain_AI_Assistant.register_for_execution(
     analyze_firmware_tool,
     description="Analizza un firmware o binario con binwalk/strings per estrarre credenziali e configurazioni."
+)
+GhostBrain_AI_Assistant.register_for_execution(
+    visual_browse_tool,
+    description=(
+        "OCCHI DELL'AI (THE EYES). Usa questo tool per 'vedere' una pagina web quando curl/wgets falliscono o quando serve analizzare screenshot."
+        "Cattura screenshot e usa Vision AI per descrivere vulnerabilità visive (login form, versioni, errori)."
+        "Input: url (e opzionalmente specific_query)."
+    )
 )
 
 # === 5. DEDUPLICA TESTI ===
@@ -301,12 +310,23 @@ def start_autogen_chat(user_message: str, use_task_context: bool = False) -> Tup
     Returns:
         Tuple[risposta, modello, memorie_usate]
     """
-    log_info(f"Nuova chat: '{user_message[:100]}...' (use_task_context={use_task_context})")
+    # === PSYCHE INJECTION ===
+    from backend.core.psyche import get_psyche
+    psyche = get_psyche()
+    emotional_state = psyche.get_emotional_state()
+    
+    psyche_context = (
+        f"\n[INTERNAL STATE] Mode: {emotional_state['mode']} "
+        f"(Dopamine: {emotional_state['dopamine']}, Cortisol: {emotional_state['cortisol']})\n"
+        f"Guidance: {emotional_state['description']}\n"
+    )
+    
+    log_info(f"Nuova chat: '{user_message[:100]}...' (Mode: {emotional_state['mode']})")
     try:
         if use_task_context:
             # 🎯 USA CONTESTO TASK: Non consultare memoria a lungo termine
             # Il user_message contiene già tutto il contesto necessario
-            full_prompt = user_message
+            full_prompt = psyche_context + user_message
             relevant_memories = []  # Nessuna memoria a lungo termine
             log_info("[CHAT] Usando contesto task, memoria a lungo termine disabilitata")
         else:
@@ -318,7 +338,7 @@ def start_autogen_chat(user_message: str, use_task_context: bool = False) -> Tup
                 first_memory = relevant_memories[0]['doc'][:200]  # Max 200 char
                 memory_context = f"Contesto: {first_memory}...\n\n"
             
-            full_prompt = memory_context + user_message
+            full_prompt = psyche_context + memory_context + user_message
 
         # STEP 2: Chatta con l'agente
         chat_result = User_Proxy.initiate_chat(

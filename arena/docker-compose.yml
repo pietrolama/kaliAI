@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # === RED TEAM (THE ATTACKER) ===
+  # KaliAI Executor Node: Replica l'ambiente di esecuzione dei container Podman
+  # Ma qui gira come servizio persistente per simulazioni lunghe.
+  kali_attacker:
+    image: kalilinux/kali-rolling
+    container_name: arena_red_attacker
+    command: tail -f /dev/null
+    networks:
+      - cyber_range
+    volumes:
+      - ./shared_intel:/home/kali/intel
+    environment:
+      - TARGET_IP=10.10.10.5
+
+  # === BLUE TEAM (THE VICTIM) ===
+  # Juice Shop: Classica applicazione vulnerabile OWASP
+  victim_juiceshop:
+    image: bkimminich/juice-shop
+    container_name: arena_blue_juiceshop
+    networks:
+      cyber_range:
+        ipv4_address: 10.10.10.5
+    ports:
+      - "3000:3000" # Esposto solo per debug umano, l'AI lo attacca su 10.10.10.5:3000
+  # === LOGGING / AUDIT ===
+  # Un semplice server syslog o simile potrebbe andare qui per tracciare gli eventi
+
+networks:
+  cyber_range:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
