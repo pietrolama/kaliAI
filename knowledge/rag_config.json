@@ -1,0 +1,244 @@
+{
+  "sources": {
+    "owasp": {
+      "enabled": true,
+      "priority": 8,
+      "collection": "kb",
+      "update_frequency": "weekly"
+    },
+    "nvd": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "params": {
+        "days": 7,
+        "severity": null
+      }
+    },
+    "cve_details": {
+      "enabled": false,
+      "priority": 5,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "note": "Requires scraping implementation"
+    },
+    "securityfocus": {
+      "enabled": false,
+      "priority": 5,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "note": "Requires scraping implementation"
+    },
+    "cisa_kev": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "cve",
+      "update_frequency": "daily"
+    },
+    "rss_feeds": {
+      "enabled": true,
+      "priority": 6,
+      "collection": "kb",
+      "update_frequency": "daily"
+    },
+    "github": {
+      "enabled": true,
+      "priority": 7,
+      "collection": "exploits",
+      "update_frequency": "daily"
+    },
+    "mitre_attack": {
+      "enabled": true,
+      "priority": 8,
+      "collection": "kb",
+      "update_frequency": "monthly"
+    },
+    "github_advisories": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "params": {
+        "days": 7,
+        "severity": null
+      }
+    },
+    "rapid7": {
+      "enabled": true,
+      "priority": 6,
+      "collection": "kb",
+      "update_frequency": "weekly",
+      "params": {
+        "days": 30,
+        "max_items": 20
+      }
+    },
+    "cisa_alerts": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "params": {
+        "days": 30,
+        "max_items": 20
+      }
+    },
+    "exploitdb": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "exploits",
+      "update_frequency": "daily",
+      "params": {
+        "days": 7,
+        "max_items": 50
+      }
+    },
+    "knowledge_export": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "kb",
+      "update_frequency": "once",
+      "params": {
+        "limit": null,
+        "category_filter": null
+      },
+      "note": "Importa knowledge base da knowledge_export.json (5,896 documenti con embeddings)"
+    },
+    "payloadsallthethings": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "kb",
+      "update_frequency": "weekly",
+      "params": {
+        "update_repo": true,
+        "max_files": 1000
+      },
+      "note": "PayloadsAllTheThings - Comprehensive payload collection (Livello 1)"
+    },
+    "exploitdb_repo": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "exploits",
+      "update_frequency": "weekly",
+      "params": {
+        "update_repo": true,
+        "max_exploits": 2000
+      },
+      "note": "Exploit-DB complete repository with exploit code (Livello 1)"
+    },
+    "cisa_kev": {
+      "enabled": true,
+      "priority": 10,
+      "collection": "cve",
+      "update_frequency": "daily",
+      "params": {
+        "update_daily": true
+      },
+      "note": "CISA Known Exploited Vulnerabilities - Critical priority (Livello 1)"
+    },
+    "hacktricks": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "kb",
+      "update_frequency": "monthly",
+      "params": {
+        "max_pages": 100
+      },
+      "note": "HackTricks - Comprehensive hacking techniques (Livello 2)"
+    },
+    "owasp_cheatsheets": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "kb",
+      "update_frequency": "monthly",
+      "params": {
+        "max_sheets": 50
+      },
+      "note": "OWASP Cheat Sheet Series - Security best practices (Livello 2)"
+    },
+    "rss_feeds": {
+      "enabled": true,
+      "priority": 7,
+      "collection": "kb",
+      "update_frequency": "daily",
+      "params": {
+        "days": 7,
+        "max_items_per_feed": 20
+      },
+      "note": "Multiple RSS feeds for security news (Livello 3)"
+    },
+    "htb_writeups": {
+      "enabled": true,
+      "priority": 9,
+      "collection": "kb",
+      "update_frequency": "weekly",
+      "params": {
+        "max_pages": 50,
+        "retired_only": true
+      },
+      "note": "Hack The Box write-ups from 0xdf and community (CTF Logs)"
+    },
+    "tryhackme": {
+      "enabled": true,
+      "priority": 8,
+      "collection": "kb",
+      "update_frequency": "weekly",
+      "params": {
+        "max_rooms": 30
+      },
+      "note": "TryHackMe room walkthroughs (CTF Logs)"
+    },
+    "vulnhub_writeups": {
+      "enabled": true,
+      "priority": 8,
+      "collection": "kb",
+      "update_frequency": "weekly",
+      "params": {
+        "max_machines": 30
+      },
+      "note": "VulnHub machine write-ups (CTF Logs)"
+    },
+    "honeypot_logs": {
+      "enabled": false,
+      "priority": 7,
+      "collection": "kb",
+      "update_frequency": "daily",
+      "params": {
+        "max_logs": 100
+      },
+      "note": "Honeypot attack logs (T-Pot format) - Requires log files in data/honeypot_logs"
+    },
+    "pentest_reports": {
+      "enabled": true,
+      "priority": 8,
+      "collection": "kb",
+      "update_frequency": "monthly",
+      "params": {
+        "max_reports": 20
+      },
+      "note": "Public penetration test reports (Cure53, NCC Group, Trail of Bits)"
+    }
+  },
+  "search": {
+    "default_top_k": 5,
+    "max_results": 20,
+    "min_relevance_score": 0.3,
+    "collection_weights": {
+      "cve": 1.2,
+      "exploits": 1.3,
+      "kb": 1.0,
+      "tools": 1.1,
+      "successes": 1.5
+    }
+  },
+  "embeddings": {
+    "model": "BAAI/bge-small-en-v1.5",
+    "dims": 384,
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "normalize_embeddings": true,
+    "note": "State-of-the-art model per 384 dim, qualità superiore a all-MiniLM-L6-v2"
+  }
+}
+

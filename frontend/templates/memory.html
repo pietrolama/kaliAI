@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Memoria Lunga AI</title>
+  <style>
+body {
+  background: #131313;
+  color: #eee;
+  font-family: 'Fira Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  margin: 0;
+  padding: 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+th, td {
+  border-bottom: 1px solid #222;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #181818;
+  font-weight: bold;
+}
+td {
+  background: #191b22;
+  font-size: 14px;
+  word-break: break-word;
+}
+td pre, td code {
+  background: #232323;
+  color: #8aff80;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+.memory-text, .memory-meta {
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-line;
+  font-family: inherit;
+}
+.memory-meta {
+  font-size: 12px;
+  color: #80b2ff;
+  background: #171d23;
+  border-radius: 6px;
+  padding: 5px;
+}
+tbody tr:hover {
+  background: #22252b;
+}
+.action-btn {
+  background: #ff3333;
+  border: none;
+  color: #fff;
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.action-btn:hover {
+  background: #ff4d4d;
+}
+@media (max-width: 800px) {
+  table, thead, tbody, th, td, tr { display: block; }
+  th { position: sticky; top: 0; z-index: 2; }
+  td { border-bottom: none; border-top: 1px solid #222;}
+}
+  </style>
+</head>
+<body>
+  <h1>Memoria a lungo termine GhostBrain</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Testo</th>
+        <th>Metadata</th>
+        <th>Azioni</th>
+      </tr>
+    </thead>
+    <tbody id="memoryTable"></tbody>
+  </table>
+  <script>
+function deleteMemory(id, row) {
+    if (!confirm("Sei sicuro di voler eliminare questo ricordo?")) return;
+    fetch("/memory/" + id, { method: "DELETE" })
+        .then(res => res.json())
+        .then(data => {
+            if (data.ok) {
+                row.parentNode.removeChild(row);
+            } else {
+                alert("Errore nell'eliminazione: " + (data.error || "sconosciuto"));
+            }
+        })
+        .catch(() => alert("Errore di rete."));
+}
+
+// --- CARICAMENTO DINAMICO MEMORIA ---
+function loadMemory() {
+    fetch("/memory")
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById("memoryTable");
+            tbody.innerHTML = ""; // Pulisci prima
+            if (!data.memories || data.memories.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='4'><em>Nessun ricordo salvato</em></td></tr>";
+                return;
+            }
+            for (const mem of data.memories) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${mem.id}</td>
+                    <td class="memory-text"><pre>${mem.text}</pre></td>
+                    <td class="memory-meta"><pre>${JSON.stringify(mem.metadata, null, 2)}</pre></td>
+                    <td>
+                        <button class="action-btn" data-id="${mem.id}">Elimina</button>
+                    </td>
+                `;
+                tr.querySelector('.action-btn').onclick = function() {
+                    deleteMemory(mem.id, tr);
+                };
+                tbody.appendChild(tr);
+            }
+        });
+}
+
+// All'avvio pagina
+window.onload = loadMemory;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""
+Task Context Manager - Gestisce la persistenza del contesto dei task
+"""
+import uuid
+import logging
+from typing import Dict, Optional, Any
+from datetime import datetime, timedelta
+
+logger = logging.getLogger('TaskContextManager')
+
+class TaskContextManager:
+    """
+    Gestisce la cache dei contesti dei task in memoria.
+    Ogni task ha un ID univoco e mantiene tutto il contesto dell'esecuzione.
+    """
+    
+    def __init__(self, ttl_hours: int = 24):
+        """
+        Args:
+            ttl_hours: Tempo di vita dei task in cache (default: 24 ore)
+        """
+        self.task_cache: Dict[str, Dict[str, Any]] = {}
+        self.ttl_hours = ttl_hours
+    
+    def create_task(self, prompt: str, objective_analysis: Optional[Dict] = None) -> str:
+        """
+        Crea un nuovo task e restituisce il task-id.
+        
+        Args:
+            prompt: Prompt originale dell'utente
+            objective_analysis: Analisi dell'obiettivo (se disponibile)
+            
+        Returns:
+            task_id: ID univoco del task
+        """
+        task_id = f"task-{uuid.uuid4().hex[:12]}"
+        
+        self.task_cache[task_id] = {
+            "task_id": task_id,
+            "created_at": datetime.now(),
+            "prompt": prompt,
+            "objective_analysis": objective_analysis or {},
+            "target_ip": None,
+            "confirmed_target_ip": None,
+            "steps": [],
+            "step_results": [],
+            "completed_context": "",
+            "last_step_number": 0,
+            "last_failure": None,
+            "open_ports": [],
+            "discovered_services": [],
+            "status": "running"  # running, completed, failed
+        }
+        
+        logger.info(f"[TASK-CONTEXT] Task creato: {task_id}")
+        return task_id
+    
+    def update_task(self, task_id: str, **updates) -> bool:
+        """
+        Aggiorna i dati di un task.
+        
+        Args:
+            task_id: ID del task
+            **updates: Campi da aggiornare
+            
+        Returns:
+            True se il task esiste e è stato aggiornato, False altrimenti
+        """
+        if task_id not in self.task_cache:
+            logger.warning(f"[TASK-CONTEXT] Task non trovato: {task_id}")
+            return False
+        
+        self.task_cache[task_id].update(updates)
+        self.task_cache[task_id]["updated_at"] = datetime.now()
+        logger.debug(f"[TASK-CONTEXT] Task aggiornato: {task_id} - {list(updates.keys())}")
+        return True
+    
+    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Recupera il contesto di un task.
+        
+        Args:
+            task_id: ID del task
+            
+        Returns:
+            Dizionario con il contesto del task o None se non trovato/scaduto
+        """
+        if task_id not in self.task_cache:
+            logger.warning(f"[TASK-CONTEXT] Task non trovato: {task_id}")
+            return None
+        
+        task = self.task_cache[task_id]
+        
+        # Verifica se il task è scaduto
+        created_at = task.get("created_at")
+        if created_at:
+            age = datetime.now() - created_at
+            if age > timedelta(hours=self.ttl_hours):
+                logger.info(f"[TASK-CONTEXT] Task scaduto: {task_id} (età: {age})")
+                del self.task_cache[task_id]
+                return None
+        
+        return task
+    
+    def get_task_context_for_chat(self, task_id: str) -> Optional[str]:
+        """
+        Genera un prompt di contesto per la chat basato sul task.
+        
+        Args:
+            task_id: ID del task
+            
+        Returns:
+            Stringa con il contesto formattato per l'LLM o None
+        """
+        task = self.get_task(task_id)
+        if not task:
+            return None
+        
+        context = "══════════════════════════════════════════════════\n"
+        context += "📋 CONTESTO DELLA MISSIONE PRECEDENTE\n"
+        context += "══════════════════════════════════════════════════\n\n"
+        
+        # Obiettivo
+        context += f"🎯 OBIETTIVO ORIGINALE:\n{task.get('prompt', 'N/A')}\n\n"
+        
+        # Target IP
+        target_ip = task.get('confirmed_target_ip') or task.get('target_ip')
+        if target_ip:
+            context += f"🎯 IP TARGET CONFERMATO: {target_ip}\n\n"
+        
+        # Analisi obiettivo
+        obj_analysis = task.get('objective_analysis', {})
+        if obj_analysis:
+            target_desc = obj_analysis.get('target_description', '')
+            if target_desc:
+                context += f"📱 TARGET: {target_desc}\n"
+            target_hints = obj_analysis.get('target_hints', [])
+            if target_hints:
+                context += f"💡 HINT IDENTIFICAZIONE: {', '.join(target_hints[:3])}\n"
+            context += "\n"
+        
+        # Step eseguiti
+        steps = task.get('steps', [])
+        step_results = task.get('step_results', [])
+        if steps:
+            context += f"📝 STEP ESEGUITI ({len(steps)} totali):\n"
+            for i, step in enumerate(steps[:5], 1):  # Mostra max 5 step
+                context += f"   {i}. {step}\n"
+                # Aggiungi risultato se disponibile
+                if i <= len(step_results):
+                    result = step_results[i-1]
+                    if result.get('status') == 'completato':
+                        context += f"      ✅ Completato\n"
+                    elif result.get('status') == 'fallito':
+                        context += f"      ❌ Fallito: {result.get('result', 'N/A')[:100]}\n"
+            context += "\n"
+        
+        # Ultimo step fallito
+        last_failure = task.get('last_failure')
+        if last_failure:
+            context += f"⚠️ ULTIMO STEP FALLITO:\n"
+            context += f"   Step: {last_failure.get('step_number', 'N/A')}\n"
+            context += f"   Descrizione: {last_failure.get('step_description', 'N/A')}\n"
+            context += f"   Errore: {last_failure.get('error', 'N/A')}\n\n"
+        
+        # Porte aperte scoperte
+        open_ports = task.get('open_ports', [])
+        if open_ports:
+            context += f"🔌 PORTE APERTE SCOPERTE:\n"
+            context += f"   {', '.join(open_ports)}\n\n"
+        
+        # Servizi scoperti
+        services = task.get('discovered_services', [])
+        if services:
+            context += f"🌐 SERVIZI SCOPERTI:\n"
+            for service in services[:3]:
+                context += f"   • {service}\n"
+            context += "\n"
+        
+        # Stato
+        status = task.get('status', 'unknown')
+        context += f"📊 STATO MISSIONE: {status.upper()}\n"
+        
+        context += "\n══════════════════════════════════════════════════\n"
+        context += "💬 DOMANDA DELL'UTENTE (riferita a questa missione):\n"
+        context += "══════════════════════════════════════════════════\n"
+        
+        return context
+    
+    def cleanup_expired_tasks(self):
+        """Rimuove i task scaduti dalla cache."""
+        now = datetime.now()
+        expired = []
+        
+        for task_id, task in self.task_cache.items():
+            created_at = task.get("created_at")
+            if created_at:
+                age = now - created_at
+                if age > timedelta(hours=self.ttl_hours):
+                    expired.append(task_id)
+        
+        for task_id in expired:
+            del self.task_cache[task_id]
+            logger.info(f"[TASK-CONTEXT] Task rimosso (scaduto): {task_id}")
+        
+        if expired:
+            logger.info(f"[TASK-CONTEXT] Pulizia completata: {len(expired)} task rimossi")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Restituisce statistiche sulla cache."""
+        return {
+            "total_tasks": len(self.task_cache),
+            "ttl_hours": self.ttl_hours
+        }
+
+
+# Istanza globale
+_task_context_manager = None
+
+def get_task_context_manager() -> TaskContextManager:
+    """Restituisce l'istanza globale del TaskContextManager."""
+    global _task_context_manager
+    if _task_context_manager is None:
+        _task_context_manager = TaskContextManager()
+    return _task_context_manager
+

@@ -1,0 +1,6 @@
+{
+  "use_docker_sandbox": true,
+  "model": "deepseek-reasoner",
+  "api_key": "sk-6473748545d34e2796fb04725443b367",
+  "base_url": "https://api.deepseek.com/v1/"
+}
