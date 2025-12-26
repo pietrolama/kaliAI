@@ -1,31 +1,66 @@
 #!/bin/bash
 
-echo "====== AVVIO KALI AI ======"
-echo "[*] Ambiente: $(pwd)"
+# Configuration
+export PATH=$PATH:$HOME/.local/bin
+export PYTHONPATH=$PYTHONPATH:.
 
-# Verifica esistenza .env
+# Banner
+echo "============================================================================="
+echo "   _____ ______ _____ _______ _____ ____  _   _    ___  "
+echo "  / ____|  ____/ ____|__   __|_   _/ __ \| \ | |  / _ \ "
+echo " | (___ | |__ | |       | |    | || |  | |  \| | | (_) |"
+echo "  \___ \|  __|| |       | |    | || |  | | . \` |  \__, |"
+echo "  ____) | |___| |____   | |   _| || |__| | |\  |    / / "
+echo " |_____/|______\_____|  |_|  |_____\____/|_| \_|   /_/  "
+echo "                                                        "
+echo "   INITIALIZING SWARM ARCHITECTURE...                   "
+echo "============================================================================="
+echo "[*] Host: $(hostname) | User: $(whoami)"
+echo "[*] Path: $(pwd)"
+
+# 1. Check Podman
+if ! command -v podman &> /dev/null; then
+    echo "[!] CRITICAL: 'podman' not found. This architecture requires Rootless Podman."
+    exit 1
+fi
+echo "[*] Podman: DETECTED"
+
+# 2. Check Podman Compose
+if ! command -v podman-compose &> /dev/null; then
+    echo "[!] WARNING: 'podman-compose' not found in PATH."
+    echo "[!] Attempting to use python module..."
+    if ! python3 -m podman_compose --version &> /dev/null; then 
+        echo "[!] CRITICAL: podman-compose not found. Install it with: pip install podman-compose"
+        exit 1
+    fi
+else
+    echo "[*] Podman-Compose: DETECTED"
+fi
+
+# 3. Env Check
 if [ ! -f .env ]; then
-    echo "[!] ERRORE: File .env non trovato!"
-    echo "[!] Copia .env.example in .env e configura le tue API keys"
+    echo "[!] ERROR: .env file missing."
     exit 1
 fi
 
-echo "[*] Controllo processi esistenti sulla porta 5000..."
+# 4. Cleanup Ports
+echo "[*] Clearing port 5000..."
 lsof -ti:5000 | xargs kill -9 2>/dev/null
-echo "[*] Porta liberata"
 
-echo "[*] Attivazione ambiente virtuale..."
-source venv/bin/activate
+# 5. Activate Venv
+echo "[*] Activating Neural Link (venv)..."
+if [ -f venv/bin/activate ]; then
+    source venv/bin/activate
+else
+    echo "[!] Venv not found. Creating..."
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+fi
 
-echo "[*] Caricamento variabili ambiente da .env..."
-export $(cat .env | grep -v '^#' | xargs)
+# 6. Load Env
+export $(grep -v '^#' .env | xargs)
 
-echo "[*] Configurazione:"
-echo "    - Modello: ${MODEL_NAME}"
-echo "    - Base URL: ${OPENAI_BASE_URL}"
-echo "    - Docker Sandbox: ${USE_DOCKER_SANDBOX}"
-
-echo "[*] Avvio Flask (CTRL+C per uscire)"
-python run.py
-
-echo "====== TERMINATO ======"
+# 7. Start
+echo "[*] Initializing GhostBrain Core..."
+python3 run.py

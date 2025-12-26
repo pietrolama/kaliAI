@@ -60,6 +60,7 @@ temp/
 
 # Data and large files
 data/
+!data/culture/
 *.sqlite3
 *.bin
 *.db

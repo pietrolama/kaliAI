@@ -22,7 +22,8 @@
     padding: 0;
 }
 
-html, body {
+html,
+body {
     height: 100%;
     width: 100%;
     background: var(--hacker-bg);
@@ -88,7 +89,8 @@ html, body {
 .main-layout {
     display: flex;
     height: 100vh;
-    padding-top: 60px; /* Space for global header */
+    padding-top: 60px;
+    /* Space for global header */
 }
 
 /* === SIDEBAR === */
@@ -303,7 +305,7 @@ html, body {
     transition: color 0.2s;
 }
 
-.checkbox-label input[type="checkbox"]:checked ~ .checkbox-text {
+.checkbox-label input[type="checkbox"]:checked~.checkbox-text {
     color: var(--hacker-cyan);
 }
 
@@ -339,7 +341,8 @@ html, body {
     accent-color: #ff4444;
 }
 
-.primary-btn, .secondary-btn {
+.primary-btn,
+.secondary-btn {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -465,7 +468,8 @@ html, body {
     border-bottom: 2px solid var(--hacker-border);
 }
 
-.panel-header h2, .panel-header h3 {
+.panel-header h2,
+.panel-header h3 {
     font-size: 1.2rem;
     color: var(--hacker-cyan);
     margin: 0;
@@ -491,8 +495,15 @@ html, body {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 .welcome-message h3 {
@@ -559,8 +570,13 @@ html, body {
 }
 
 @keyframes terminalFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .terminal-prompt {
@@ -753,8 +769,15 @@ html, body {
 }
 
 @keyframes shimmer {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
 }
 
 .deep-steps-list {
@@ -790,19 +813,28 @@ html, body {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
-.step-completato, .step-completed {
+.step-completato,
+.step-completed {
     background: rgba(0, 255, 136, 0.12);
     border-color: var(--hacker-success);
 }
 
-.step-fallito, .step-failed {
+.step-fallito,
+.step-failed {
     background: rgba(255, 68, 68, 0.15);
     border-color: var(--hacker-error);
 }
 
 @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 10px rgba(0, 217, 255, 0.3); }
-    50% { box-shadow: 0 0 25px rgba(0, 217, 255, 0.8); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(0, 217, 255, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(0, 217, 255, 0.8);
+    }
 }
 
 .step-header {
@@ -884,7 +916,9 @@ html, body {
 }
 
 /* === LOADING/EMPTY STATES === */
-.deep-steps-loading, .deep-steps-empty, .deep-steps-error {
+.deep-steps-loading,
+.deep-steps-empty,
+.deep-steps-error {
     text-align: center;
     padding: 60px 40px;
     color: var(--hacker-text-dim);
@@ -1101,12 +1135,16 @@ html, body {
 }
 
 @keyframes spin {
-    100% { transform: rotate(360deg); }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* === RESPONSIVE === */
 @media (max-width: 1200px) {
-    .logs-panel, .info-panel {
+
+    .logs-panel,
+    .info-panel {
         min-width: 280px;
         max-width: 320px;
     }
@@ -1116,13 +1154,14 @@ html, body {
     .mode-container {
         flex-direction: column;
     }
-    
+
     .step-execution-container,
     .chat-main-container {
         flex: 1;
     }
-    
-    .logs-panel, .info-panel {
+
+    .logs-panel,
+    .info-panel {
         min-width: 100%;
         max-width: 100%;
         max-height: 250px;
@@ -1134,33 +1173,33 @@ html, body {
         height: 50px;
         padding: 0 12px;
     }
-    
+
     .logo {
         font-size: 1.2rem;
     }
-    
+
     .subtitle {
         display: none;
     }
-    
+
     .main-layout {
         padding-top: 50px;
     }
-    
+
     .sidebar {
         position: absolute;
         height: calc(100vh - 50px);
         z-index: 200;
     }
-    
+
     .action-buttons {
         flex-direction: column;
     }
-    
+
     .btn-text {
         display: none;
     }
-    
+
     .side-panels {
         flex-direction: column;
         max-height: none;
@@ -1168,7 +1207,8 @@ html, body {
 }
 
 /* === UTILITY === */
-.loading, .empty-history {
+.loading,
+.empty-history {
     text-align: center;
     color: var(--hacker-text-dim);
     padding: 20px;
@@ -1184,4 +1224,274 @@ html, body {
     background: radial-gradient(ellipse at center, rgba(0, 217, 255, 0.03) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
+}
+
+/* === SECTION 9 ADDITIONS === */
+
+/* AGENT STATUS GRID */
+.agent-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.agent-card {
+    background: rgba(10, 20, 30, 0.8);
+    border: 1px solid var(--hacker-border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--hacker-border);
+    transition: background 0.3s;
+}
+
+.agent-card:hover {
+    border-color: var(--hacker-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 217, 255, 0.2);
+}
+
+.agent-avatar {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 10px rgba(0, 217, 255, 0.4));
+}
+
+.agent-name {
+    font-weight: 700;
+    color: var(--hacker-cyan);
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.agent-role {
+    font-size: 0.8rem;
+    color: var(--hacker-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+
+.agent-status {
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.agent-status.online {
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--hacker-success);
+    border: 1px solid var(--hacker-success);
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.2);
+}
+
+.agent-status.idle {
+    background: rgba(139, 159, 170, 0.1);
+    color: var(--hacker-text-dim);
+    border: 1px solid var(--hacker-text-dim);
+}
+
+.agent-status.scanning {
+    background: rgba(255, 165, 0, 0.1);
+    color: var(--hacker-warning);
+    border: 1px solid var(--hacker-warning);
+    animation: pulse 2s infinite;
+}
+
+/* GRAPH PANEL */
+.graph-panel {
+    background: var(--hacker-panel);
+    border: 2px solid var(--hacker-border);
+    border-radius: 12px;
+    overflow: hidden;
+    height: 300px;
+    /* Altezza fissa per il grafo */
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+    position: relative;
+}
+
+.graph-content {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Griglia di sfondo per il grafo */
+.graph-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    pointer-events: none;
+}
+
+.graph-placeholder {
+    color: var(--hacker-text-dim);
+    font-style: italic;
+    border: 1px dashed var(--hacker-border);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+/* ARENA CONTROLS */
+.arena-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.arena-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.arena-btn.red {
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+}
+
+.arena-btn.red:hover {
+    background: rgba(255, 68, 68, 0.2);
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.3);
+}
+
+.arena-btn.blue {
+    background: rgba(68, 136, 255, 0.1);
+    color: #4488ff;
+    border: 1px solid #4488ff;
+}
+
+.arena-btn.blue:hover {
+    background: rgba(68, 136, 255, 0.2);
+    box-shadow: 0 0 15px rgba(68, 136, 255, 0.3);
+}
+
+/* ANIMATIONS */
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* === SECTION 9 STYLING === */
+
+/* Hexagonal Agent Cards */
+.agent-card {
+    position: relative;
+    background: var(--hacker-panel);
+    border: 1px solid var(--hacker-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+    clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%);
+}
+
+.agent-card:hover {
+    border-color: var(--hacker-cyan);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.2);
+}
+
+/* Agent Status Colors */
+.agent-status.online {
+    color: var(--hacker-success);
+    text-shadow: 0 0 5px var(--hacker-success);
+}
+
+.agent-status.idle {
+    color: var(--hacker-text-dim);
+}
+
+.agent-status.scanning {
+    color: var(--hacker-cyan);
+    animation: pulse 1s infinite alternate;
+}
+
+/* Togusa Amber/Orange Theme */
+.agent-status.human {
+    color: #ffaa00;
+    text-shadow: 0 0 5px #ffaa00;
+}
+
+.agent-status.offline {
+    color: #555;
+}
+
+/* Agent Avatar Size */
+.agent-avatar {
+    font-size: 2rem;
+    margin-bottom: 4px;
+}
+
+.agent-name {
+    font-weight: 700;
+    color: var(--hacker-text);
+}
+
+.agent-role {
+    font-size: 0.8rem;
+    color: var(--hacker-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Global Amber Alert Class */
+.alert-amber {
+    border-color: #ffaa00 !important;
+    background: rgba(255, 170, 0, 0.1) !important;
+    color: #ffaa00 !important;
 }

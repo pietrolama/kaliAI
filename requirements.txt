@@ -45,3 +45,5 @@ pytest==8.0.0
 feedparser==6.0.12
 
 rank_bm25
+feedparser
+prometheus_client

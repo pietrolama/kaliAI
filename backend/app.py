@@ -14,7 +14,7 @@ load_dotenv()
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from backend.core.ghostbrain_autogen import start_autogen_chat
+from backend.agents.swarm import start_swarm_chat, start_section9_mission
 from backend.core import tools
 from backend.core.tools import generate_deep_steps, execute_step_by_step_streaming
 from backend.core.task_context_manager import get_task_context_manager
@@ -96,8 +96,9 @@ def deepstep():
         def run_execution():
             """Esegue lo step-by-step in un thread separato"""
             try:
+                print(f"[DEBUG] Thread started for task {task_id}. Calling start_section9_mission...")
                 # Passa task_id al callback per aggiornare contesto durante esecuzione
-                step_results, completed, model = execute_step_by_step_streaming(
+                step_results, completed, model = start_section9_mission(
                     prompt, 
                     progress_callback,
                     task_id=task_id
@@ -439,16 +440,16 @@ def ask():
                 enriched_prompt = task_context + user_input
                 
                 # Chiama LLM con contesto task (senza memoria a lungo termine)
-                result = start_autogen_chat(enriched_prompt, use_task_context=True)
+                result = start_swarm_chat(enriched_prompt, use_task_context=True)
             else:
                 log_info(f"[CHAT] Task {task_id} non trovato o scaduto, uso memoria normale")
-                result = start_autogen_chat(user_input)
+                result = start_swarm_chat(user_input)
         else:
             # Nessun task_id: comportamento normale con memoria a lungo termine
             if use_step_context:
                 log_info("[CHAT] Contesto step precedenti gestito dalla memoria conversazionale")
             
-            result = start_autogen_chat(user_input)
+            result = start_swarm_chat(user_input)
         # Adesso il backend deve restituire (reply, model, memoria_usata)
         if not result or not isinstance(result, (tuple, list)):
             reply, model, memoria_usata = "Errore interno: nessuna risposta dal modello.", "N/A", []

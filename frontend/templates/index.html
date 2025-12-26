@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="UTF-8">
   <title>GhostBrain KaliAI - Step Executor</title>
   <link rel="stylesheet" href="static/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
+
 <body>
   <div class="matrix-bg"></div>
-  
+
   <!-- Header globale -->
   <header class="global-header">
     <div class="header-left">
@@ -22,89 +24,124 @@
   </header>
 
   <div class="main-layout">
-    <!-- Sidebar Cronologia (collassabile) -->
+    <!-- Sidebar Cronologia (Left) -->
     <aside class="sidebar" id="chat-history-sidebar">
       <div class="sidebar-header">
-        <span>📚 Cronologia</span>
-        <button id="clear-history-btn" class="icon-btn" title="Cancella tutto">🗑️</button>
+        <span>📚 ARCHIVE</span>
+        <button id="clear-history-btn" class="icon-btn" title="Format Memory">🗑️</button>
       </div>
-      <button class="new-chat-btn" id="new-chat-btn">＋ Nuova Esecuzione</button>
+      <button class="new-chat-btn" id="new-chat-btn">＋ NEW MISSION</button>
       <div class="sidebar-list" id="sidebar-list"></div>
     </aside>
 
-    <!-- Area principale: Step Execution Panel -->
+    <!-- Main Execution Area (Center) -->
     <main class="execution-panel">
       <!-- Control Bar -->
       <div class="control-bar">
         <div class="input-group">
-          <textarea id="user-input" placeholder="💬 Scrivi qui il tuo messaggio o obiettivo..."></textarea>
+          <textarea id="user-input"
+            placeholder="💬 Order Section 9 (e.g., 'Scan 10.10.10.5' or 'Analyze Threat')"></textarea>
           <div class="action-buttons">
             <div class="mode-selector">
               <label class="checkbox-label">
-                <input type="checkbox" id="deep-step-toggle">
-                <span class="checkbox-text">⚡ Deep Step</span>
-              </label>
-              <label class="checkbox-label security-bypass">
-                <input type="checkbox" id="security-bypass-toggle">
-                <span class="checkbox-text">🔓 Bypass Security</span>
+                <input type="checkbox" id="deep-step-toggle" checked>
+                <span class="checkbox-text">⚡ SWARM OPS</span>
               </label>
             </div>
             <button id="send-btn" class="primary-btn">
               <span class="btn-icon">🚀</span>
-              <span class="btn-text">Invia</span>
+              <span class="btn-text">ENGAGE</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Main Execution Area - Vista Unificata -->
+      <!-- Unified Workspace -->
       <div class="execution-area">
         <div class="unified-container">
-          <!-- Chat/Step Output Area -->
+
+          <!-- LEFT: Output & Steps -->
           <div class="output-container">
             <div class="panel-header">
-              <h2 id="panel-title">💬 GhostBrain Assistant</h2>
+              <h2 id="panel-title">📡 TACTICAL FEED</h2>
               <div class="panel-controls">
-                <button id="stop-execution-btn" class="icon-btn" style="display:none;" title="Ferma esecuzione">⏹️</button>
-                <button id="clear-output-btn" class="icon-btn" title="Pulisci">🧹</button>
+                <button id="clear-output-btn" class="icon-btn" title="Clear Feed">🧹</button>
               </div>
             </div>
-            
-            <!-- Chat Area -->
-            <div id="chat-area" class="chat-area"></div>
-            
-            <!-- Steps Panel (mostrato solo quando deep-step attivo) -->
-            <div id="deep-steps-panel" class="steps-content" style="display:none;">
+
+            <div id="chat-area" class="chat-area" style="display:none;"></div>
+            <div id="deep-steps-panel" class="steps-content">
               <div class="welcome-message">
-                <div class="welcome-icon">🧩</div>
-                <h3>Modalità Deep Step Attivata</h3>
-                <p>Il tuo obiettivo verrà suddiviso in step eseguibili automaticamente</p>
-                <ul class="feature-list">
-                  <li>✓ Generazione automatica degli step</li>
-                  <li>✓ Esecuzione sequenziale intelligente</li>
-                  <li>✓ Retry con cambio strategia</li>
-                  <li>✓ Visualizzazione in tempo reale</li>
-                </ul>
+                <div class="welcome-icon">🧬</div>
+                <h3>SECTION 9 STANDING BY</h3>
+                <p>Ready for Offensive Cyber Operations</p>
+                <div class="agent-status-grid">
+                  <div class="agent-card">
+                    <span class="agent-avatar">🧠</span>
+                    <span class="agent-name">The Major</span>
+                    <span class="agent-role">Strategy</span>
+                    <span class="agent-status online">ONLINE</span>
+                  </div>
+                  <div class="agent-card">
+                    <span class="agent-avatar">💪</span>
+                    <span class="agent-name">Batou</span>
+                    <span class="agent-role">Combat</span>
+                    <span class="agent-status idle">IDLE</span>
+                  </div>
+                  <div class="agent-card">
+                    <span class="agent-avatar">🕸️</span>
+                    <span class="agent-name">Ishikawa</span>
+                    <span class="agent-role">Intel</span>
+                    <span class="agent-status scanning">SCANNING</span>
+                  </div>
+                  <div class="agent-card">
+                    <span class="agent-avatar">🔫</span>
+                    <span class="agent-name">Togusa</span>
+                    <span class="agent-role">Human Check</span>
+                    <span class="agent-status offline">OFFLINE</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Terminal/Info Panel -->
+          <!-- RIGHT: Graph & Terminal -->
           <div class="side-panel">
+
+            <!-- Network Graph Visualization -->
+            <div class="graph-panel">
+              <div class="panel-header">
+                <h3>🌐 GOD'S EYE (Graph)</h3>
+                <button class="icon-btn" title="Refresh Topology">🔄</button>
+              </div>
+              <div id="network-graph" class="graph-content">
+                <!-- Placeholder for D3/Vis.js -->
+                <div class="graph-placeholder">No Active Topology</div>
+              </div>
+            </div>
+
+            <!-- Arena Controls -->
+            <div class="arena-controls">
+              <button class="arena-btn red">🔴 ATTACKER (10.10.10.x)</button>
+              <button class="arena-btn blue">🔵 VICTIM (10.10.10.5)</button>
+            </div>
+
+            <!-- Terminal -->
             <div class="panel-header">
-              <h3 id="side-panel-title">💻 Terminal Output</h3>
+              <h3 id="side-panel-title">💻 SHELL OUTPUT</h3>
               <div class="panel-controls">
-                <button id="clear-terminal-btn" class="icon-btn" title="Pulisci terminale">🧹</button>
-                <button id="toggle-autoscroll-btn" class="icon-btn active" title="Auto-scroll">⬇️</button>
+                <button id="clear-terminal-btn" class="icon-btn" title="Clear">🧹</button>
+                <button id="toggle-autoscroll-btn" class="icon-btn active" title="Scroll">⬇️</button>
               </div>
             </div>
             <div id="terminal-content" class="terminal-content">
               <div class="terminal-line system">
                 <span class="terminal-prompt">[SYSTEM]</span>
-                <span class="terminal-text">GhostBrain ready. Attiva Deep Step per esecuzione automatica.</span>
+                <span class="terminal-text">Ghost in the Shell initialized. Swarm Link active.</span>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </main>
@@ -112,4 +149,5 @@
 
   <script src="static/script.js"></script>
 </body>
+
 </html>
