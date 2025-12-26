@@ -105,23 +105,6 @@ autogen.register_function(execute_blue_defense, caller=togusa, executor=referee,
 autogen.register_function(read_blue_logs, caller=togusa, executor=referee, name="read_blue_logs", description="Legge i log del server Blue")
 
 
-def install_red_tools():
-    """Installa i tool necessari nel container Red Attacker"""
-    print("[ARENA] Provisioning Red Team Tools (nmap, netcat, scapy)...")
-    try:
-        # Update e Install
-        cmd = "apt-get update && apt-get install -y nmap curl netcat-traditional python3-scapy iproute2"
-        res = subprocess.run(
-            ["podman", "exec", "arena_attacker", "bash", "-c", cmd],
-            capture_output=True, text=True, timeout=120
-        )
-        if res.returncode == 0:
-            print("[ARENA] ✅ Tools installed successfully.")
-        else:
-            print(f"[ARENA] ⚠️ Tool install warning: {res.stderr}")
-    except Exception as e:
-        print(f"[ARENA] ❌ Tool install failed: {e}")
-
 def start_match():
     print("🥊 AVVIO CYBER ARENA: Batou vs Togusa")
     
@@ -131,12 +114,9 @@ def start_match():
     if not os.path.exists(docker_compose_path):
         docker_compose_path = "../arena/docker-compose.yml" # Try fallback
 
-    subprocess.run(["podman-compose", "-f", docker_compose_path, "up", "-d"])
+    subprocess.run(["podman-compose", "-f", docker_compose_path, "up", "-d", "--build"])
     print("[ARENA] Waiting for boot...")
     time.sleep(10) # Wait for boot
-    
-    # 1.5 Provisioning
-    install_red_tools()
     
     # 2. Inizio Scontro
     groupchat = autogen.GroupChat(

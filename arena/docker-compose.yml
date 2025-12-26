@@ -21,7 +21,9 @@ services:
   # L'ATTACCANTE (KaliAI Red Team)
   # Monta il codice attuale per usare le skill apprese
   red_attacker:
-    image: kalilinux/kali-rolling
+    build:
+      context: .
+      dockerfile: Dockerfile.attacker
     container_name: arena_attacker
     hostname: red-team
     tty: true

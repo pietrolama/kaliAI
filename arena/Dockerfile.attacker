@@ -1,0 +1,15 @@
+FROM kalilinux/kali-rolling
+
+# Pre-installazione tool offensivi (richiede internet durante il build)
+RUN apt-get update && apt-get install -y \
+    nmap \
+    curl \
+    netcat-traditional \
+    python3-scapy \
+    iproute2 \
+    dnsutils \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+# Mantiene il container vivo
+CMD ["tail", "-f", "/dev/null"]
