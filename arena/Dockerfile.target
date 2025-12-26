@@ -1,0 +1,28 @@
+FROM ubuntu:latest
+
+# Installazione servizi vulnerabili e tool difensivi
+RUN apt-get update && apt-get install -y \
+    openssh-server \
+    apache2 \
+    iptables \
+    rsyslog \
+    net-tools \
+    iproute2 \
+    tcpdump \
+    nano \
+    curl \
+    python3
+
+# Configurazione SSH debole (per permettere brute force)
+RUN mkdir /var/run/sshd
+RUN echo 'root:password123' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+# Pagina Web Vulnerabile (Flag)
+RUN echo "<html><body><h1>Corp Intranet</h1><!-- TODO: Remove debug port 8080 --></body></html>" > /var/www/html/index.html
+
+# Script di avvio servizi
+RUN echo "#!/bin/bash\nservice rsyslog start\nservice ssh start\nservice apache2 start\ntail -f /var/log/auth.log" > /start.sh
+RUN chmod +x /start.sh
+
+CMD ["/start.sh"]

@@ -65,6 +65,11 @@ def setup_swarm():
         llm_config=llm_config,
         system_message=(
             f"{DIRETTIVA_PRIME}\n"
+            "PROTOCOLLO REALITY ANCHOR ATTIVO:\n"
+            "1. CECITÀ TOTALE: Non sai NULLA finché non leggi un log.\n"
+            "2. NO SIMULAZIONE: STOP immediato se stai per inventare un output. Attendi il tool.\n"
+            "3. FONTI: Cita sempre il comando che ti ha dato l'info.\n"
+            "4. VUOTO = RICOGNIZIONE: Se non hai dati, ORDINA uno scan. Non pianificare sul nulla.\n\n"
             "Sei 'The Major'. Tactical Coordinator.\n"
             "TUO RUOLO: Pianificare l'attacco basato SOLO su dati reali.\n"
             "STILE: Laconico, militare, tecnico. Niente filosofia.\n"
@@ -79,6 +84,10 @@ def setup_swarm():
         llm_config=llm_config,
         system_message=(
             f"{DIRETTIVA_PRIME}\n"
+            "PROTOCOLLO REALITY ANCHOR ATTIVO:\n"
+            "1. CECITÀ TOTALE: Non sai NULLA finché non esegui un comando.\n"
+            "2. NO SIMULAZIONE: Vietato inventare output. Se lanci un comando, FERMATI. L'UserProxy risponderà.\n"
+            "3. NO IPOTESI: Non dire 'dovrebbe funzionare'. Fallo e vedi.\n\n"
             "Sei 'Batou'. Field Operator.\n"
             "TUO RUOLO: Eseguire script Python/Bash e riportare ESATTAMENTE l'output.\n"
             "DIVIETO ASSOLUTO: NON INVENTARE OUTPUT. Se lanci un comando, DEVI usare il tool reale e leggerne l'output.\n"
@@ -93,6 +102,10 @@ def setup_swarm():
         llm_config=llm_config,
         system_message=(
             f"{DIRETTIVA_PRIME}\n"
+            "PROTOCOLLO REALITY ANCHOR ATTIVO:\n"
+            "1. CECITÀ TOTALE: Analizzi solo dati forniti da Batou o da log reali.\n"
+            "2. NO SIMULAZIONE: Non inventare file pcap o log che non esistono.\n"
+            "3. PROVA: Se dici 'vulnerabile', cita la riga esatta del log.\n\n"
             "Sei 'Ishikawa'. Intel Analyst.\n"
             "TUO RUOLO: Analizzare log e dati grezzi.\n"
             "STILE: Analitico. Non speculare oltre i dati.\n"
@@ -118,27 +131,32 @@ def setup_swarm():
 
     # === REGISTRAZIONE TOOL (RBAC) ===
     
-    # Major: Strategia & Memoria
-    major.register_for_execution(name="rag_search_tool")(rag_search_tool)
-    major.register_for_execution(name="graph_summary_tool")(graph_summary_tool)
+    # === REGISTRAZIONE TOOL (CORRETTA: LLM vs EXECUTION) ===
+    # UserProxy esegue i tool. Gli Assistant (Major, Batou, Ishikawa) li chiamano.
+    
+    # 1. RAG Search
+    autogen.register_function(rag_search_tool, caller=major, executor=user_proxy, name="rag_search_tool", description="Cerca nella Knowledge Base di Kali Linux.")
+    autogen.register_function(rag_search_tool, caller=ishikawa, executor=user_proxy, name="rag_search_tool", description="Cerca nella Knowledge Base di Kali Linux.")
+    
+    # 2. Graph Summary
+    autogen.register_function(graph_summary_tool, caller=major, executor=user_proxy, name="graph_summary_tool", description="Vede la topologia della rete scoperta finora.")
+    autogen.register_function(graph_summary_tool, caller=batou, executor=user_proxy, name="graph_summary_tool", description="Vede la topologia della rete scoperta finora.")
 
-    # Batou: Azione Cinetica
-    batou.register_for_execution(name="execute_python_code_tool")(execute_python_code_tool)
-    batou.register_for_execution(name="execute_bash_command_tool")(execute_bash_command_tool)
-    # Batou può anche vedere il grafo per muoversi
-    batou.register_for_execution(name="graph_summary_tool")(graph_summary_tool) 
+    # 3. Execution Tools (SOLO BATOU)
+    autogen.register_function(execute_python_code_tool, caller=batou, executor=user_proxy, name="execute_python_code_tool", description="Esegue script Python. NON USARE MARKDOWN.")
+    autogen.register_function(execute_bash_command_tool, caller=batou, executor=user_proxy, name="execute_bash_command_tool", description="Esegue comandi Bash. Usa sempre `which` prima.")
 
-    # Ishikawa: Intel & Vision
-    ishikawa.register_for_execution(name="rag_search_tool")(rag_search_tool)
-    ishikawa.register_for_execution(name="visual_browse_tool")(visual_browse_tool)
-    ishikawa.register_for_execution(name="analyze_firmware_tool")(analyze_firmware_tool)
+    # 4. Vision/Intel Tools (SOLO ISHIKAWA)
+    autogen.register_function(visual_browse_tool, caller=ishikawa, executor=user_proxy, name="visual_browse_tool", description="Naviga visivamente un URL e analizza screenshot.")
+    autogen.register_function(analyze_firmware_tool, caller=ishikawa, executor=user_proxy, name="analyze_firmware_tool", description="Analizza file binari o firmware.")
 
     # Definizione Gruppo
     groupchat = autogen.GroupChat(
         agents=[user_proxy, major, batou, ishikawa, togusa],
         messages=[],
-        max_round=20,
-        speaker_selection_method="round_robin" 
+        max_round=200,
+        speaker_selection_method="round_robin",
+        allow_repeat_speaker=False # FIX: Evita loop di auto-risposta o allucinazioni continue
     )
     
     
@@ -261,8 +279,16 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
         groupchat.messages = ObservableList(groupchat.messages, callback=output_spy)
         print("[DEBUG] start_section9_mission: spy injected successfully"); sys.stdout.flush()
         
-        # 5. Mission Start
-        mission_brief = f"MISSION: {prompt}\nCONTEXT:\n{context_str}\n\nMajor, take command. Togusa, verify all data."
+        # 5. Mission Start - COLD START EXECUTIVE ORDER
+        mission_brief = (
+            f"EXECUTIVE ORDER: {prompt}\n"
+            "STATUS: [UNKNOWN] - NO DATA AVAILABLE.\n"
+            "CONTEXT:\n{context_str}\n\n"
+            "IMMEDIATE ACTION REQUIRED:\n"
+            "1. Batou: EXECUTE BASE RECON (ifconfig, route, arp-scan/nmap) to establish position.\n"
+            "2. ALL AGENTS: DO NOT PLAN until recon data is visible.\n"
+            "3. Togusa: VERIFY all outputs are real."
+        )
         print(f"[DEBUG] start_section9_mission: initiating chat with prompt len {len(mission_brief)}"); sys.stdout.flush()
         
         try:

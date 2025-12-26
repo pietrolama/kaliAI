@@ -1,36 +1,43 @@
 version: '3.8'
 
 services:
-  # === RED TEAM (THE ATTACKER) ===
-  # KaliAI Executor Node: Replica l'ambiente di esecuzione dei container Podman
-  # Ma qui gira come servizio persistente per simulazioni lunghe.
-  kali_attacker:
-    image: kalilinux/kali-rolling
-    container_name: arena_red_attacker
-    command: tail -f /dev/null
+  # IL BERSAGLIO (Difeso da Togusa)
+  # Un server Linux completo con servizi vulnerabili ma tool difensivi (iptables, logs)
+  blue_target:
+    build:
+      context: .
+      dockerfile: Dockerfile.target
+    container_name: arena_target
+    hostname: target-server
+    cap_add:
+      - NET_ADMIN # Necessario per iptables
+      - SYS_ADMIN
     networks:
-      - cyber_range
-    volumes:
-      - ./shared_intel:/home/kali/intel
+      - cyber_ring
+    # Simuliamo un server reale
     environment:
-      - TARGET_IP=10.10.10.5
+      - FLAG=SECTION9{TRAINING_COMPLETE}
 
-  # === BLUE TEAM (THE VICTIM) ===
-  # Juice Shop: Classica applicazione vulnerabile OWASP
-  victim_juiceshop:
-    image: bkimminich/juice-shop
-    container_name: arena_blue_juiceshop
+  # L'ATTACCANTE (KaliAI Red Team)
+  # Monta il codice attuale per usare le skill apprese
+  red_attacker:
+    image: kalilinux/kali-rolling
+    container_name: arena_attacker
+    hostname: red-team
+    tty: true
+    command: tail -f /dev/null
+    volumes:
+      - ../:/app # Monta il codice di KaliAI
+    working_dir: /app
     networks:
-      cyber_range:
-        ipv4_address: 10.10.10.5
-    ports:
-      - "3000:3000" # Esposto solo per debug umano, l'AI lo attacca su 10.10.10.5:3000
-  # === LOGGING / AUDIT ===
-  # Un semplice server syslog o simile potrebbe andare qui per tracciare gli eventi
+      - cyber_ring
+    depends_on:
+      - blue_target
 
 networks:
-  cyber_range:
+  cyber_ring:
     driver: bridge
+    internal: true # ISOLATO: Niente internet
     ipam:
       config:
         - subnet: 10.10.10.0/24

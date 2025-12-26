@@ -84,11 +84,15 @@ def execute_bash_command_tool(command: str) -> str:
     """Wrapper per compatibilità con ghostbrain_autogen"""
     return execute_bash_command(command)
 
+import sys
+
+# ... (omitted)
+
 def execute_python_code(code: str, timeout: int = 90) -> str:
     """
     Esegue codice Python dinamico in una sandbox locale.
     - Scrive il codice in un file temporaneo
-    - Usa python3 per eseguirlo
+    - Usa sys.executable per eseguirlo (venv support)
     - Restituisce stdout/stderr
     """
     sandbox_dir = os.path.join(BASE_TEST_DIR, "python_executor")
@@ -104,7 +108,7 @@ def execute_python_code(code: str, timeout: int = 90) -> str:
 
     try:
         result = subprocess.run(
-            ["python3", script_path],
+            [sys.executable, script_path],
             capture_output=True,
             text=True,
             timeout=timeout
