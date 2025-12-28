@@ -734,7 +734,7 @@ def start_arena_therapy():
 
 
 @app.route("/arena/stream")
-def arena_stream():
+def arena_therapy_stream():
     """SSE stream for arena logs."""
     from backend.core.arena.architect import get_architect
     
