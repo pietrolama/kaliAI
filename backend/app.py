@@ -682,6 +682,96 @@ def psyche_adjust():
         psyche.decay()
     return jsonify(psyche.get_emotional_state())
 
+
+# ========== ARENA ENDPOINTS ==========
+
+@app.route("/arena")
+def arena_dashboard():
+    """Serve the Arena War Room dashboard."""
+    return render_template("arena.html")
+
+
+@app.route("/arena/traumas", methods=["GET"])
+def get_traumas():
+    """Get all traumas from the registry."""
+    try:
+        from backend.core.psyche.trauma_registry import get_trauma_registry
+        registry = get_trauma_registry()
+        return jsonify({
+            "traumas": registry.to_list(),
+            "stats": registry.get_stats()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e), "traumas": [], "stats": {}})
+
+
+@app.route("/arena/start_therapy", methods=["POST"])
+def start_arena_therapy():
+    """Start a therapy session for a trauma."""
+    try:
+        from backend.core.arena.architect import get_architect
+        
+        data = request.get_json()
+        trauma_id = data.get("trauma_id")
+        
+        if not trauma_id:
+            return jsonify({"error": "trauma_id required"}), 400
+        
+        architect = get_architect()
+        
+        if architect.is_running:
+            return jsonify({"error": "Session already running"}), 409
+        
+        session = architect.start_therapy_session(trauma_id)
+        
+        return jsonify({
+            "status": "started",
+            "session_id": session.session_id,
+            "trauma_id": trauma_id
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/arena/stream")
+def arena_stream():
+    """SSE stream for arena logs."""
+    from backend.core.arena.architect import get_architect
+    
+    def generate():
+        architect = get_architect()
+        
+        # Send initial heartbeat
+        yield f"data: {json.dumps({'message': 'Stream connected', 'level': 'SYSTEM'})}\n\n"
+        
+        # Stream logs from architect
+        for entry in architect.get_log_stream():
+            yield f"data: {json.dumps(entry)}\n\n"
+        
+        # Send completion
+        session = architect.current_session
+        if session:
+            final = {
+                "message": f"Session complete: {session.status}",
+                "level": "SYSTEM",
+                "psyche": {
+                    "dopamine": get_psyche().get_emotional_state()["dopamine"],
+                    "cortisol": get_psyche().get_emotional_state()["cortisol"],
+                    "score": 1.0 if session.success else 0.0
+                }
+            }
+            yield f"data: {json.dumps(final)}\n\n"
+    
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
 # ========== START ==========
 if __name__ == "__main__":
     is_debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"

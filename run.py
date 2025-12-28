@@ -20,10 +20,11 @@ if __name__ == "__main__":
     port = int(os.getenv('FLASK_PORT', '5000'))
     
     # Avvia server
+    # use_reloader=False: CRITICAL - prevents restart when agent writes Python files
     app.run(
         host=host,
         port=port,
         debug=debug,
-        use_reloader=debug
+        use_reloader=False
     )
 
