@@ -126,6 +126,7 @@ def execute_bash_command_subprocess(command: str) -> str:
         result = subprocess.run(
             command,
             shell=True,
+            executable="/bin/bash",  # Use bash for brace expansion, arrays, etc.
             cwd=BASE_TEST_DIR,
             capture_output=True,
             text=True,

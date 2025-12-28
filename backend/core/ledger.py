@@ -145,6 +145,13 @@ class ExecutionLedger:
         
         return events[-limit:]
     
+    def get_current_session_events(self) -> List[Dict]:
+        """
+        Get all events from the current session/run.
+        Convenience method for post-mission analysis.
+        """
+        return self.get_recent_events(run_id=self._current_run_id, limit=500)
+    
     def get_tool_events(self, run_id: Optional[str] = None) -> List[Dict]:
         """Get all TOOL_CALL and TOOL_OUTPUT events for analysis."""
         events = self.get_recent_events(run_id=run_id, limit=500)

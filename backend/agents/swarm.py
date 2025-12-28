@@ -374,24 +374,46 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
         
         # 6. POST-MISSION THERAPY SESSION
         try:
-            print("[DEBUG] start_section9_mission: Starting Therapy Session"); sys.stdout.flush()
+            logger.info("Starting Therapy Session")
             
-            # Collect dialog log from groupchat messages
+            # === A. DIALOGUE HISTORY (Narrative) ===
+            # Get messages from ObservableList (populated during chat)
+            raw_messages = list(groupchat.messages)  # Convert to regular list
+            
             dialog_log = []
-            technical_log_lines = []
-            
-            for msg in groupchat.messages:
+            for msg in raw_messages:
                 dialog_log.append({
                     "name": msg.get("name", "unknown"),
                     "role": msg.get("role", "assistant"),
                     "content": msg.get("content", "")
                 })
-                # Extract ALL content as technical log - log_parser will filter/categorize
+            
+            # === B. TECHNICAL EVENTS (Facts from Ledger) ===
+            technical_events = ledger.get_current_session_events()
+            
+            # Build technical log from both sources
+            technical_log_lines = []
+            
+            # Add chat content
+            for msg in raw_messages:
                 content = msg.get("content", "")
                 if content:
                     technical_log_lines.append(content)
             
+            # Add Ledger tool outputs (real execution results)
+            for event in technical_events:
+                if event.get("type") == "TOOL_OUTPUT":
+                    output = event.get("output_preview", "")
+                    status = event.get("status", "")
+                    if output:
+                        technical_log_lines.append(f"[{status}] {output}")
+            
             technical_log = "\n".join(technical_log_lines)
+            
+            # === DEBUG: Verify data is present ===
+            logger.info(f"[THERAPIST] Dialogue: {len(dialog_log)} messages")
+            logger.info(f"[THERAPIST] Ledger Events: {len(technical_events)} events")
+            logger.info(f"[THERAPIST] Technical Log: {len(technical_log)} chars")
             
             # Run Therapist analysis
             therapist = get_therapist()
@@ -402,7 +424,7 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
             
             # Stream therapy report to UI
             therapy_output = therapist.format_report(report)
-            print(f"[THERAPIST] Session Complete:\n{therapy_output}"); sys.stdout.flush()
+            logger.info(f"[THERAPIST] Session Complete - Score: {report.mission_score:.0%}")
             
             # 📝 LEDGER: End the run
             mission_status = "SUCCESS" if report.mission_score >= 0.5 else "PARTIAL"

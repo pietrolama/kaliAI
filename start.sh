@@ -4,6 +4,7 @@
 export PATH=$PATH:$HOME/.local/bin
 export PYTHONPATH=$PYTHONPATH:.
 export FLASK_DEBUG=true  # Enable debug mode (binds to 127.0.0.1 only)
+export PYTHONUNBUFFERED=1  # Force real-time log output (no buffering)
 
 # Banner
 echo "============================================================================="
@@ -64,4 +65,4 @@ export $(grep -v '^#' .env | xargs)
 
 # 7. Start
 echo "[*] Initializing GhostBrain Core..."
-python3 run.py
+python3 -u run.py  # -u: unbuffered output for real-time logs

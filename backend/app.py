@@ -689,4 +689,6 @@ if __name__ == "__main__":
     host = "127.0.0.1" if is_debug else os.getenv("FLASK_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_PORT", 5000))
     log_info(f"KaliAI pronto su {host}:{port} (debug={is_debug})")
-    app.run(host=host, port=port, debug=is_debug)
+    # use_reloader=False: Disables auto-restart on file changes
+    # Critical for agent operations that write Python scripts
+    app.run(host=host, port=port, debug=is_debug, use_reloader=False)
