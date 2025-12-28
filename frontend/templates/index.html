@@ -3,151 +3,424 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>GhostBrain KaliAI - Step Executor</title>
-  <link rel="stylesheet" href="static/style.css">
+  <title>GhostBrain KaliAI - Section 9</title>
+  <link rel="stylesheet" href="/static/style.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* INLINE RESET TO ENSURE LAYOUT */
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      background: #05070a;
+      color: #e0e6ed;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* LEFT NAV */
+    .left-nav {
+      width: 260px;
+      background: #0b1016;
+      border-right: 1px solid #1c2633;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .logo-box {
+      padding: 20px;
+      border-bottom: 1px solid #1c2633;
+    }
+
+    .logo-box h1 {
+      color: #ff9100;
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .nav-menu {
+      flex: 1;
+      padding: 20px;
+    }
+
+    .nav-menu ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .nav-menu li {
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      color: #8b9faa;
+    }
+
+    .nav-menu li:hover,
+    .nav-menu li.active {
+      background: rgba(255, 145, 0, 0.1);
+      color: #ff9100;
+    }
+
+    .psyche-box {
+      padding: 15px;
+      margin: 15px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid #1c2633;
+      border-radius: 6px;
+    }
+
+    .psyche-box h4 {
+      color: #00d9ff;
+      font-size: 0.8rem;
+      margin: 0 0 10px 0;
+    }
+
+    .psyche-bar {
+      height: 6px;
+      background: #ffffff11;
+      border-radius: 3px;
+      margin-bottom: 8px;
+    }
+
+    .psyche-bar .fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .psyche-bar .fill.sync {
+      background: #00d9ff;
+      width: 90%;
+    }
+
+    .psyche-bar .fill.stress {
+      background: #ff4444;
+      width: 20%;
+    }
+
+    /* MAIN AREA */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .header-bar {
+      height: 60px;
+      background: #05070a;
+      border-bottom: 1px solid #1c2633;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      flex-shrink: 0;
+    }
+
+    .status-online {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #00ff88;
+      font-size: 0.9rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #00ff88;
+      border-radius: 50%;
+    }
+
+    .model-tag {
+      color: #8b9faa;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      border: 1px solid #1c2633;
+      border-radius: 4px;
+    }
+
+    /* CHAT AREA */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px;
+    }
+
+    .welcome-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8b9faa;
+    }
+
+    .welcome-msg h2 {
+      color: #e0e6ed;
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
+    .agent-grid {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+
+    .agent-card {
+      text-align: center;
+    }
+
+    .agent-card .emoji {
+      font-size: 2rem;
+    }
+
+    .agent-card .name {
+      display: block;
+      color: #ff9100;
+      font-weight: 700;
+    }
+
+    .agent-card .role {
+      font-size: 0.8rem;
+      color: #8b9faa;
+    }
+
+    /* INPUT AREA - ALWAYS VISIBLE */
+    .input-box {
+      padding: 20px 30px;
+      background: #0b1016;
+      border-top: 1px solid #1c2633;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    #user-input {
+      flex: 1;
+      background: #00000066;
+      border: 1px solid #1c2633;
+      color: #e0e6ed;
+      padding: 15px;
+      font-size: 1rem;
+      resize: none;
+      height: 60px;
+      outline: none;
+    }
+
+    #user-input:focus {
+      border-color: #ff9100;
+    }
+
+    .send-btn {
+      background: #ff9100;
+      color: #000;
+      border: none;
+      padding: 0 30px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .send-btn:hover {
+      background: #ffaa33;
+    }
+
+    .toggles-row {
+      display: flex;
+      gap: 20px;
+    }
+
+    .toggles-row label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #8b9faa;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* RIGHT SIDEBAR */
+    .right-sidebar {
+      width: 280px;
+      background: #0b1016;
+      border-left: 1px solid #1c2633;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    .history-header {
+      padding: 20px;
+      border-bottom: 1px solid #1c2633;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .history-header h3 {
+      color: #ff9100;
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #8b9faa;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+
+    .history-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .history-item .title {
+      color: #e0e6ed;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .history-item .meta {
+      color: #8b9faa;
+      font-size: 0.75rem;
+    }
+  </style>
 </head>
 
 <body>
-  <div class="matrix-bg"></div>
+  <div class="app-layout">
 
-  <!-- Header globale -->
-  <header class="global-header">
-    <div class="header-left">
-      <h1 class="logo">⚡ GhostBrain KaliAI</h1>
-      <span class="subtitle">Step-by-Step Executor</span>
-    </div>
-    <div class="header-right">
-      <span id="model-info" class="model-badge"></span>
-      <button id="toggle-sidebar-btn" class="icon-btn" title="Cronologia">📋</button>
-    </div>
-  </header>
-
-  <div class="main-layout">
-    <!-- Sidebar Cronologia (Left) -->
-    <aside class="sidebar" id="chat-history-sidebar">
-      <div class="sidebar-header">
-        <span>📚 ARCHIVE</span>
-        <button id="clear-history-btn" class="icon-btn" title="Format Memory">🗑️</button>
+    <!-- LEFT NAV -->
+    <nav class="left-nav">
+      <div class="logo-box">
+        <h1>⚡ SECTION 9</h1>
+        <small style="color:#00d9ff">GhostBrain KaliAI</small>
       </div>
-      <button class="new-chat-btn" id="new-chat-btn">＋ NEW MISSION</button>
-      <div class="sidebar-list" id="sidebar-list"></div>
-    </aside>
-
-    <!-- Main Execution Area (Center) -->
-    <main class="execution-panel">
-      <!-- Control Bar -->
-      <div class="control-bar">
-        <div class="input-group">
-          <textarea id="user-input"
-            placeholder="💬 Order Section 9 (e.g., 'Scan 10.10.10.5' or 'Analyze Threat')"></textarea>
-          <div class="action-buttons">
-            <div class="mode-selector">
-              <label class="checkbox-label">
-                <input type="checkbox" id="deep-step-toggle" checked>
-                <span class="checkbox-text">⚡ SWARM OPS</span>
-              </label>
-            </div>
-            <button id="send-btn" class="primary-btn">
-              <span class="btn-icon">🚀</span>
-              <span class="btn-text">ENGAGE</span>
-            </button>
-          </div>
+      <div class="nav-menu">
+        <ul>
+          <li class="active">📊 Dashboard</li>
+        </ul>
+        <div style="margin-top: 20px; padding: 10px;">
+          <button id="arena-start-btn"
+            style="width:100%; padding: 12px; background: #ff4444; color: white; border: none; cursor: pointer; font-weight: 700; margin-bottom: 8px;">⚔️
+            START ARENA</button>
+          <button id="arena-stop-btn"
+            style="width:100%; padding: 12px; background: #333; color: #aaa; border: 1px solid #555; cursor: pointer; font-weight: 700;">■
+            STOP ARENA</button>
+          <div id="arena-status" style="text-align: center; margin-top: 10px; font-size: 0.8rem; color: #8b9faa;">ARENA:
+            IDLE</div>
         </div>
       </div>
+      <div class="psyche-box">
+        <h4>🧠 PSYCHE STATUS</h4>
+        <label style="font-size:0.7rem;color:#8b9faa">SYNC RATIO</label>
+        <div class="psyche-bar">
+          <div class="fill sync"></div>
+        </div>
+        <label style="font-size:0.7rem;color:#8b9faa">STRESS LEVEL</label>
+        <div class="psyche-bar">
+          <div class="fill stress"></div>
+        </div>
+      </div>
+    </nav>
 
-      <!-- Unified Workspace -->
-      <div class="execution-area">
-        <div class="unified-container">
+    <!-- MAIN CONTENT -->
+    <main class="main-area">
+      <header class="header-bar">
+        <div class="status-online">
+          <span class="status-dot"></span>
+          <span>SYSTEM ONLINE</span>
+        </div>
+        <div class="model-tag" id="model-info">...</div>
+      </header>
 
-          <!-- LEFT: Output & Steps -->
-          <div class="output-container">
-            <div class="panel-header">
-              <h2 id="panel-title">📡 TACTICAL FEED</h2>
-              <div class="panel-controls">
-                <button id="clear-output-btn" class="icon-btn" title="Clear Feed">🧹</button>
+      <div class="chat-container">
+        <div class="messages" id="chat-area">
+          <div class="welcome-msg">
+            <div class="agent-grid">
+              <div class="agent-card">
+                <span class="emoji">🧠</span>
+                <span class="name">Major</span>
+                <span class="role">Strategy</span>
+              </div>
+              <div class="agent-card">
+                <span class="emoji">💪</span>
+                <span class="name">Batou</span>
+                <span class="role">Combat</span>
+              </div>
+              <div class="agent-card">
+                <span class="emoji">🕸️</span>
+                <span class="name">Ishikawa</span>
+                <span class="role">Intel</span>
               </div>
             </div>
-
-            <div id="chat-area" class="chat-area" style="display:none;"></div>
-            <div id="deep-steps-panel" class="steps-content">
-              <div class="welcome-message">
-                <div class="welcome-icon">🧬</div>
-                <h3>SECTION 9 STANDING BY</h3>
-                <p>Ready for Offensive Cyber Operations</p>
-                <div class="agent-status-grid">
-                  <div class="agent-card">
-                    <span class="agent-avatar">🧠</span>
-                    <span class="agent-name">The Major</span>
-                    <span class="agent-role">Strategy</span>
-                    <span class="agent-status online">ONLINE</span>
-                  </div>
-                  <div class="agent-card">
-                    <span class="agent-avatar">💪</span>
-                    <span class="agent-name">Batou</span>
-                    <span class="agent-role">Combat</span>
-                    <span class="agent-status idle">IDLE</span>
-                  </div>
-                  <div class="agent-card">
-                    <span class="agent-avatar">🕸️</span>
-                    <span class="agent-name">Ishikawa</span>
-                    <span class="agent-role">Intel</span>
-                    <span class="agent-status scanning">SCANNING</span>
-                  </div>
-                  <div class="agent-card">
-                    <span class="agent-avatar">🔫</span>
-                    <span class="agent-name">Togusa</span>
-                    <span class="agent-role">Human Check</span>
-                    <span class="agent-status offline">OFFLINE</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h2>PUBLIC SECURITY SECTION 9</h2>
+            <p>Tactical AI Swarm Ready. State your objective.</p>
           </div>
+        </div>
 
-          <!-- RIGHT: Graph & Terminal -->
-          <div class="side-panel">
-
-            <!-- Network Graph Visualization -->
-            <div class="graph-panel">
-              <div class="panel-header">
-                <h3>🌐 GOD'S EYE (Graph)</h3>
-                <button class="icon-btn" title="Refresh Topology">🔄</button>
-              </div>
-              <div id="network-graph" class="graph-content">
-                <!-- Placeholder for D3/Vis.js -->
-                <div class="graph-placeholder">No Active Topology</div>
-              </div>
-            </div>
-
-            <!-- Arena Controls -->
-            <div class="arena-controls">
-              <button class="arena-btn red">🔴 ATTACKER (10.10.10.x)</button>
-              <button class="arena-btn blue">🔵 VICTIM (10.10.10.5)</button>
-            </div>
-
-            <!-- Terminal -->
-            <div class="panel-header">
-              <h3 id="side-panel-title">💻 SHELL OUTPUT</h3>
-              <div class="panel-controls">
-                <button id="clear-terminal-btn" class="icon-btn" title="Clear">🧹</button>
-                <button id="toggle-autoscroll-btn" class="icon-btn active" title="Scroll">⬇️</button>
-              </div>
-            </div>
-            <div id="terminal-content" class="terminal-content">
-              <div class="terminal-line system">
-                <span class="terminal-prompt">[SYSTEM]</span>
-                <span class="terminal-text">Ghost in the Shell initialized. Swarm Link active.</span>
-              </div>
-            </div>
+        <!-- INPUT - ALWAYS AT BOTTOM -->
+        <div class="input-box">
+          <div class="input-row">
+            <textarea id="user-input" placeholder="Initiate Mission..."></textarea>
+            <button class="send-btn" id="send-btn">ENGAGE</button>
           </div>
-
+          <div class="toggles-row">
+            <label><input type="checkbox" id="deep-step-toggle" checked> Swarm Ops</label>
+            <label><input type="checkbox" id="security-bypass-toggle"> Unsafe Mode</label>
+          </div>
         </div>
       </div>
     </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="right-sidebar">
+      <div class="history-header">
+        <h3>🗄️ MISSION LOGS</h3>
+        <button class="clear-btn" id="clear-history-btn">🗑️</button>
+      </div>
+      <div class="history-list" id="sidebar-list">
+        <!-- Populated by JS -->
+      </div>
+    </aside>
+
   </div>
 
-  <script src="static/script.js"></script>
+  <script src="/static/script.js"></script>
 </body>
 
 </html>

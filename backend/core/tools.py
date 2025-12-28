@@ -88,18 +88,25 @@ import sys
 
 # ... (omitted)
 
-def execute_python_code(code: str, timeout: int = 90) -> str:
+def execute_python_code(code: str, timeout: int = 90, actor: str = "Batou") -> str:
     """
     Esegue codice Python dinamico in una sandbox locale.
-    - Scrive il codice in un file temporaneo
+    - Scrive il codice in un file temporaneo (fuori dal progetto per evitare Flask reload)
     - Usa sys.executable per eseguirlo (venv support)
     - Restituisce stdout/stderr
+    - 📝 Logga su Execution Ledger per audit trail
     """
-    sandbox_dir = os.path.join(BASE_TEST_DIR, "python_executor")
+    from backend.core.ledger import record_tool_call, record_tool_output, record_error
+    
+    # Usa /tmp per evitare trigger hot-reload di Flask
+    sandbox_dir = "/tmp/kaliai_sandbox"
     os.makedirs(sandbox_dir, exist_ok=True)
 
     if not code or not code.strip():
         return "[PYTHON][ERRORE] Codice vuoto, nulla da eseguire."
+
+    # 📝 LEDGER: Record TOOL_CALL before execution
+    call_id = record_tool_call(actor, "python", code[:500])  # Truncate code in log
 
     script_path = os.path.join(sandbox_dir, f"script_{uuid.uuid4().hex}.py")
 
@@ -120,14 +127,29 @@ def execute_python_code(code: str, timeout: int = 90) -> str:
             output_parts.append("[STDERR]\n" + result.stderr.strip())
 
         if not output_parts:
-            return "[PYTHON] Esecuzione completata senza output."
-
-        return "\n\n".join(part for part in output_parts if part.strip())
+            output = "[PYTHON] Esecuzione completata senza output."
+        else:
+            output = "\n\n".join(part for part in output_parts if part.strip())
+        
+        # 📝 LEDGER: Record TOOL_OUTPUT
+        success = result.returncode == 0
+        record_tool_output(
+            call_id, 
+            output, 
+            status="SUCCESS" if success else "ERROR",
+            return_code=result.returncode
+        )
+        
+        return output
 
     except subprocess.TimeoutExpired:
-        return "[PYTHON][TIMEOUT] Esecuzione terminata per timeout (limite 90s)."
+        error_msg = "[PYTHON][TIMEOUT] Esecuzione terminata per timeout (limite 90s)."
+        record_tool_output(call_id, error_msg, status="TIMEOUT", return_code=-1)
+        return error_msg
     except Exception as e:
-        return f"[PYTHON][ERRORE] {e}"
+        error_msg = f"[PYTHON][ERRORE] {e}"
+        record_error(actor, str(e), correlation_id=call_id)
+        return error_msg
     finally:
         try:
             os.remove(script_path)

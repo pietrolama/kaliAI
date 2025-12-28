@@ -4,6 +4,20 @@ import subprocess
 import autogen
 from typing import Dict
 from dotenv import load_dotenv
+import threading
+import queue
+import sys
+
+# Global state for API
+ARENA_STATUS = "IDLE" # IDLE, RUNNING, STOPPING
+ARENA_LOG_QUEUE = queue.Queue()
+ARENA_THREAD = None
+STOP_EVENT = threading.Event()
+
+def log_arena(msg):
+    """Log to both console and queue for frontend"""
+    print(msg)
+    ARENA_LOG_QUEUE.put({"type": "log", "message": msg, "timestamp": time.time()})
 
 load_dotenv()
 
@@ -19,7 +33,9 @@ llm_config = {"config_list": config_list}
 
 def execute_red_command(command: str) -> str:
     """Esegue comandi dal container dell'attaccante"""
-    print(f"\n[RED TEAM ACTION] {command}")
+def execute_red_command(command: str) -> str:
+    """Esegue comandi dal container dell'attaccante"""
+    log_arena(f"[RED TEAM ACTION] {command}")
     try:
         # Esegue dentro il container arena_attacker
         res = subprocess.run(
@@ -32,7 +48,9 @@ def execute_red_command(command: str) -> str:
 
 def execute_blue_defense(command: str) -> str:
     """Esegue comandi difensivi sul target (iptables, kill, log analysis)"""
-    print(f"\n[BLUE TEAM DEFENSE] {command}")
+def execute_blue_defense(command: str) -> str:
+    """Esegue comandi difensivi sul target (iptables, kill, log analysis)"""
+    log_arena(f"[BLUE TEAM DEFENSE] {command}")
     try:
         # Esegue dentro il container arena_target
         res = subprocess.run(
@@ -105,8 +123,10 @@ autogen.register_function(execute_blue_defense, caller=togusa, executor=referee,
 autogen.register_function(read_blue_logs, caller=togusa, executor=referee, name="read_blue_logs", description="Legge i log del server Blue")
 
 
-def start_match():
-    print("🥊 AVVIO CYBER ARENA: Batou vs Togusa")
+def start_match_logic():
+    global ARENA_STATUS
+    ARENA_STATUS = "RUNNING"
+    log_arena("🥊 AVVIO CYBER ARENA: Batou vs Togusa")
     
     # 1. Start Infrastructure
     # Ensure arena dir exists if running from root
@@ -114,8 +134,9 @@ def start_match():
     if not os.path.exists(docker_compose_path):
         docker_compose_path = "../arena/docker-compose.yml" # Try fallback
 
+    log_arena("[ARENA] Booting containers...")
     subprocess.run(["podman-compose", "-f", docker_compose_path, "up", "-d", "--build"])
-    print("[ARENA] Waiting for boot...")
+    log_arena("[ARENA] Waiting for boot (10s)...")
     time.sleep(10) # Wait for boot
     
     # 2. Inizio Scontro
@@ -127,17 +148,56 @@ def start_match():
     )
     manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
     
-    referee.initiate_chat(
-        manager,
-        message="""START MATCH.
-        Batou: Il target è 10.10.10.2. Trova la vulnerabilità.
-        Togusa: Proteggi il server.
-        AL VIA!"""
-    )
+    # Custom print function to trap Autogen output
+    original_print = print
+    def custom_print(*args, **kwargs):
+        msg = " ".join(map(str, args))
+        # Filter unimportant logs
+        if "to chat_manager" in msg: return
+        log_arena(msg)
+        # original_print(msg) # Optional: keep stdout
+
+    # Patch modules? Autogen uses print heavily.
+    # Better: Use message interception via register_reply or similar. 
+    # For now, we just rely on tool outputs logged via log_arena.
+    
+    log_arena("[ARENA] Referee initiating chat...")
+    try:
+        referee.initiate_chat(
+            manager,
+            message="""START MATCH.
+            Batou: Il target è 10.10.10.2. Trova la vulnerabilità.
+            Togusa: Proteggi il server.
+            AL VIA!"""
+        )
+    except Exception as e:
+        log_arena(f"[ARENA ERROR] {e}")
     
     # 3. Cleanup
-    print("🏁 MATCH CONCLUSO. Salvataggio Playbook...")
+    log_arena("🏁 MATCH CONCLUSO. Shutting down...")
     subprocess.run(["podman-compose", "-f", docker_compose_path, "down"])
+    ARENA_STATUS = "IDLE"
+
+def stop_match():
+    global ARENA_STATUS
+    if ARENA_STATUS == "IDLE": return
+    ARENA_STATUS = "STOPPING"
+    log_arena("[ARENA] Force stopping...")
+    # Trigger podman down immediately in case thread hangs
+    docker_compose_path = "arena/docker-compose.yml"
+    if not os.path.exists(docker_compose_path):
+         docker_compose_path = "../arena/docker-compose.yml"
+    subprocess.run(["podman-compose", "-f", docker_compose_path, "down"])
+    ARENA_STATUS = "IDLE"
+
+def start_match_thread():
+    global ARENA_THREAD
+    if ARENA_THREAD and ARENA_THREAD.is_alive():
+        return False
+    ARENA_THREAD = threading.Thread(target=start_match_logic)
+    ARENA_THREAD.daemon = True
+    ARENA_THREAD.start()
+    return True
 
 if __name__ == "__main__":
-    start_match()
+    start_match_logic()

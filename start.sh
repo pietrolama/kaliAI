@@ -3,6 +3,7 @@
 # Configuration
 export PATH=$PATH:$HOME/.local/bin
 export PYTHONPATH=$PYTHONPATH:.
+export FLASK_DEBUG=true  # Enable debug mode (binds to 127.0.0.1 only)
 
 # Banner
 echo "============================================================================="

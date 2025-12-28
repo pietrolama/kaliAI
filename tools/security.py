@@ -55,22 +55,35 @@ class SecurityValidator:
     ]
     
     @classmethod
-    def validate_command(cls, command: str, strict_mode: bool = False, bypass: bool = False) -> Tuple[bool, str]:
+    def validate_command(cls, command: str, strict_mode: bool = False, bypass: bool = False,
+                        security_profile: str = "LOCAL_READONLY") -> Tuple[bool, str]:
         """
         Valida un comando bash per sicurezza.
         
         Args:
             command: Comando da validare
             strict_mode: Modalità strict (default False)
-            bypass: Bypass sicurezza per test (default False) ⚠️ PERICOLOSO!
+            bypass: Legacy bypass flag (maps to UNRESTRICTED profile)
+            security_profile: Security profile to use:
+                - LOCAL_READONLY: Read operations only
+                - LOCAL_SAFE: Basic local operations
+                - RECON_ONLY: Network discovery only
+                - ARENA_EXEC: Full execution in arena
+                - UNRESTRICTED: All commands allowed (dangerous!)
             
         Returns:
             Tuple[bool, str]: (is_valid, reason)
         """
-        # 🔓 BYPASS MODE - Solo per test in ambiente sicuro
+        # Map legacy bypass to UNRESTRICTED profile
         if bypass:
-            logger.warning(f"⚠️ SECURITY BYPASS ATTIVO per: {command[:80]}")
-            return True, "Security bypass enabled"
+            security_profile = "UNRESTRICTED"
+        
+        # Log with profile name instead of "BYPASS"
+        if security_profile == "UNRESTRICTED":
+            logger.warning(f"⚠️ SECURITY PROFILE: UNRESTRICTED for: {command[:80]}")
+            return True, f"Profile: {security_profile}"
+        elif security_profile in ["LOCAL_SAFE", "ARENA_EXEC", "RECON_ONLY"]:
+            logger.info(f"[SECURITY] PROFILE: {security_profile} for: {command[:60]}")
         
         if not command or len(command.strip()) == 0:
             return False, "Comando vuoto"

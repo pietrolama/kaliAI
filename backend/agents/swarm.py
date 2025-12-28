@@ -16,6 +16,8 @@ from backend.core.tools import (
 )
 from backend.core.memory.graph_memory import get_graph_memory
 from backend.core.task_context_manager import get_task_context_manager
+from backend.core.psyche.therapist import get_therapist
+from backend.core.ledger import get_ledger, record_chat
 import sys
 
 logger = logging.getLogger('Swarm')
@@ -70,6 +72,10 @@ def setup_swarm():
             "2. NO SIMULAZIONE: STOP immediato se stai per inventare un output. Attendi il tool.\n"
             "3. FONTI: Cita sempre il comando che ti ha dato l'info.\n"
             "4. VUOTO = RICOGNIZIONE: Se non hai dati, ORDINA uno scan. Non pianificare sul nulla.\n\n"
+            "METRIC RULES (OBBLIGATORIE):\n"
+            "- File SIZE (ls -la) è in BYTES, non linee.\n"
+            "- Line COUNT richiede output da 'wc -l'.\n"
+            "- MAI confondere bytes con linee nei report.\n\n"
             "Sei 'The Major'. Tactical Coordinator.\n"
             "TUO RUOLO: Pianificare l'attacco basato SOLO su dati reali.\n"
             "STILE: Laconico, militare, tecnico. Niente filosofia.\n"
@@ -142,9 +148,11 @@ def setup_swarm():
     autogen.register_function(graph_summary_tool, caller=major, executor=user_proxy, name="graph_summary_tool", description="Vede la topologia della rete scoperta finora.")
     autogen.register_function(graph_summary_tool, caller=batou, executor=user_proxy, name="graph_summary_tool", description="Vede la topologia della rete scoperta finora.")
 
-    # 3. Execution Tools (SOLO BATOU)
+    # 3. Execution Tools (BATOU primary, MAJOR for local analysis)
     autogen.register_function(execute_python_code_tool, caller=batou, executor=user_proxy, name="execute_python_code_tool", description="Esegue script Python. NON USARE MARKDOWN.")
     autogen.register_function(execute_bash_command_tool, caller=batou, executor=user_proxy, name="execute_bash_command_tool", description="Esegue comandi Bash. Usa sempre `which` prima.")
+    # Major also gets bash for SELF_ANALYSIS mode
+    autogen.register_function(execute_bash_command_tool, caller=major, executor=user_proxy, name="execute_bash_command_tool", description="Esegue comandi Bash per analisi locale. Usa per cat, ls, head.")
 
     # 4. Vision/Intel Tools (SOLO ISHIKAWA)
     autogen.register_function(visual_browse_tool, caller=ishikawa, executor=user_proxy, name="visual_browse_tool", description="Naviga visivamente un URL e analizza screenshot.")
@@ -159,8 +167,30 @@ def setup_swarm():
         allow_repeat_speaker=False # FIX: Evita loop di auto-risposta o allucinazioni continue
     )
     
+    # Termination function - checks if mission is complete
+    def is_mission_complete(msg):
+        content = msg.get("content", "") if isinstance(msg, dict) else ""
+        sender = msg.get("name", "") if isinstance(msg, dict) else ""
+        
+        # Skip termination check for initial messages from Chief_Aramaki (the mission brief)
+        if sender == "Chief_Aramaki":
+            return False
+        
+        if content:
+            content_upper = content.upper()
+            # Only terminate if these phrases appear as standalone declarations, not instructions
+            # Look for patterns like "MISSION CLOSED" at end of message or after newline
+            if "MISSION CLOSED" in content_upper or "MISSION COMPLETE" in content_upper:
+                # Make sure it's not just in an instruction like "say MISSION CLOSED"
+                if "SAY MISSION" not in content_upper and "SAYS MISSION" not in content_upper:
+                    return True
+        return False
     
-    manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config)
+    manager = autogen.GroupChatManager(
+        groupchat=groupchat, 
+        llm_config=llm_config,
+        is_termination_msg=is_mission_complete
+    )
     return user_proxy, manager, groupchat
 
 # Esposizione per l'app
@@ -250,46 +280,88 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
         # 4. Hook for Streaming (The Neural Link)
         print("[DEBUG] start_section9_mission: injecting spy (SAFE METHOD)"); sys.stdout.flush()
         
+        # 📝 LEDGER: Start a new run for this mission
+        ledger = get_ledger()
+        run_id = ledger.start_run(objective=prompt)
+        logger.info(f"Ledger run started: {run_id}")
+        
         def output_spy(msg):
-            """Intercepts internal dialogue and streams it to UI."""
-            print(f"[DEBUG] output_spy triggered! Sender: {msg.get('name')}")
+            """Intercepts internal dialogue and streams it to UI + Ledger."""
             try:
                 sender = msg.get('name', 'Unknown')
                 content = msg.get('content', '')
                 
-                # Emit as a 'Step Success' event so the UI visualizes it
-                progress_callback({
-                    "type": "step_start",
-                    "step_number": len(groupchat.messages),
-                    "step_description": f"[{sender}] Thinking..."
-                })
+                # Skip empty or trivial messages
+                if not content or len(content.strip()) < 10:
+                    return
                 
+                # 📝 LEDGER: Record chat event
+                record_chat(sender, content)
+                
+                # Send only meaningful content to frontend (no step_start spam)
                 progress_callback({
                     "type": "step_success",
                     "step_number": len(groupchat.messages),
-                    "result": f"{sender}: {content[:500]}...", # Preview
+                    "result": f"{sender}: {content[:800]}",
                     "command": "Swarm Communication"
                 })
             except Exception as e:
-                print(f"[DEBUG] ERROR inside output_spy: {e}"); sys.stdout.flush()
-                import traceback
-                traceback.print_exc()
+                logger.error(f"Error in output_spy: {e}")
 
         # SAFER INJECTION: Replace list with ObservableList
         groupchat.messages = ObservableList(groupchat.messages, callback=output_spy)
-        print("[DEBUG] start_section9_mission: spy injected successfully"); sys.stdout.flush()
+        logger.info("Message spy injected")
         
-        # 5. Mission Start - COLD START EXECUTIVE ORDER
-        mission_brief = (
-            f"EXECUTIVE ORDER: {prompt}\n"
-            "STATUS: [UNKNOWN] - NO DATA AVAILABLE.\n"
-            "CONTEXT:\n{context_str}\n\n"
-            "IMMEDIATE ACTION REQUIRED:\n"
-            "1. Batou: EXECUTE BASE RECON (ifconfig, route, arp-scan/nmap) to establish position.\n"
-            "2. ALL AGENTS: DO NOT PLAN until recon data is visible.\n"
-            "3. Togusa: VERIFY all outputs are real."
-        )
-        print(f"[DEBUG] start_section9_mission: initiating chat with prompt len {len(mission_brief)}"); sys.stdout.flush()
+        # 5. Mission Start - MODE-AWARE MISSION BRIEF
+        execution_mode = task.get("execution_mode", "LOCAL_HOST") if task else "LOCAL_HOST"
+        root_path = task.get("root_path", "") if task else ""
+        
+        if execution_mode == "SELF_ANALYSIS":
+            # Self-analysis: no network recon needed
+            mission_brief = (
+                f"MISSION MODE: SELF_ANALYSIS (Local Codebase)\n"
+                f"ROOT PATH: {root_path}\n"
+                f"EXECUTIVE ORDER: {prompt}\n\n"
+                "TOOL ASSIGNMENT (CRITICAL):\n"
+                "- The_Major: Has execute_bash_command_tool. Use it for cat, ls, head to read files.\n"
+                "- DO NOT use rag_search_tool for file reading. Use execute_bash_command_tool.\n\n"
+                "OPERATIONAL CONTEXT:\n"
+                "- Target is LOCAL FILES in this project\n"
+                "- NO network recon required (skip ifconfig, nmap, etc.)\n"
+                "- Use execute_bash_command_tool with cat/head to read file contents\n\n"
+                "IMMEDIATE ACTION:\n"
+                f"1. Use execute_bash_command_tool to read the target file\n"
+                "2. Analyze the output and report findings\n"
+                "3. When done, say MISSION CLOSED\n"
+            )
+        elif execution_mode == "REMOTE_TARGET":
+            # Remote target: full recon protocol
+            mission_brief = (
+                f"MISSION MODE: REMOTE_TARGET (External System)\n"
+                f"EXECUTIVE ORDER: {prompt}\n"
+                "STATUS: [UNKNOWN] - NO DATA AVAILABLE.\n"
+                f"CONTEXT:\n{context_str}\n\n"
+                "IMMEDIATE ACTION REQUIRED:\n"
+                "1. Batou: EXECUTE BASE RECON (ifconfig, route, nmap) to establish position.\n"
+                "2. ALL AGENTS: DO NOT PLAN until recon data is visible.\n"
+                "3. Togusa: VERIFY all outputs are real.\n"
+            )
+        else:
+            # LOCAL_HOST: filesystem operations, limited recon
+            mission_brief = (
+                f"MISSION MODE: LOCAL_HOST (Local Filesystem)\n"
+                f"EXECUTIVE ORDER: {prompt}\n\n"
+                "OPERATIONAL CONTEXT:\n"
+                "- Operating on local machine\n"
+                "- Network recon optional (brief position check ok)\n"
+                "- Focus on filesystem operations\n\n"
+                "IMMEDIATE ACTION:\n"
+                "1. Batou: pwd && ls -la to establish position\n"
+                "2. Execute requested operations\n"
+                "3. Report findings\n"
+            )
+        
+        print(f"[DEBUG] start_section9_mission: mode={execution_mode}, brief len={len(mission_brief)}"); sys.stdout.flush()
         
         try:
             print("[DEBUG] start_section9_mission: Calling user_proxy.initiate_chat NOW"); sys.stdout.flush()
@@ -299,6 +371,61 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
             print(f"[DEBUG] start_section9_mission ERROR in initiate_chat: {e}"); sys.stdout.flush()
             import traceback
             traceback.print_exc()
+        
+        # 6. POST-MISSION THERAPY SESSION
+        try:
+            print("[DEBUG] start_section9_mission: Starting Therapy Session"); sys.stdout.flush()
+            
+            # Collect dialog log from groupchat messages
+            dialog_log = []
+            technical_log_lines = []
+            
+            for msg in groupchat.messages:
+                dialog_log.append({
+                    "name": msg.get("name", "unknown"),
+                    "role": msg.get("role", "assistant"),
+                    "content": msg.get("content", "")
+                })
+                # Extract ALL content as technical log - log_parser will filter/categorize
+                content = msg.get("content", "")
+                if content:
+                    technical_log_lines.append(content)
+            
+            technical_log = "\n".join(technical_log_lines)
+            
+            # Run Therapist analysis
+            therapist = get_therapist()
+            report = therapist.analyze_mission(technical_log, dialog_log)
+            
+            # 📝 LEDGER: Get metrics for metacognition
+            ledger_metrics = ledger.compute_metrics()
+            
+            # Stream therapy report to UI
+            therapy_output = therapist.format_report(report)
+            print(f"[THERAPIST] Session Complete:\n{therapy_output}"); sys.stdout.flush()
+            
+            # 📝 LEDGER: End the run
+            mission_status = "SUCCESS" if report.mission_score >= 0.5 else "PARTIAL"
+            ledger.end_run(status=mission_status)
+            
+            progress_callback({
+                "type": "therapy_session",
+                "report": therapy_output,
+                "psyche": {
+                    "dopamine": report.post_dopamine,
+                    "cortisol": report.post_cortisol,
+                    "score": report.mission_score
+                },
+                "ledger_metrics": ledger_metrics  # Include ledger metrics in callback
+            })
+            
+        except Exception as e:
+            print(f"[DEBUG] Therapy session error (non-fatal): {e}"); sys.stdout.flush()
+            # 📝 LEDGER: End run with error status
+            try:
+                ledger.end_run(status="ERROR")
+            except:
+                pass
             
         return [], len(groupchat.messages), "Section9-Swarm"
     

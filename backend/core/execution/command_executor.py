@@ -2,6 +2,7 @@
 """
 Command Executor - Esecuzione comandi bash con sandbox Docker o subprocess
 ⚡ Supporta esecuzione parallela per comandi su più IP.
+📝 Integrato con Execution Ledger per logging atomico.
 """
 import os
 import subprocess
@@ -10,6 +11,9 @@ import time
 import docker
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Optional
+
+# Execution Ledger for audit trail
+from backend.core.ledger import record_tool_call, record_tool_output, record_error
 
 logger = logging.getLogger('CommandExecutor')
 
@@ -69,7 +73,9 @@ def execute_bash_command_subprocess(command: str) -> str:
     Returns:
         Output del comando o messaggio di errore
     """
-    log_info(f"Tentativo di esecuzione comando Bash limitato: {command}")
+    # Log raw command with repr() to preserve special chars like *
+    logger.info(f"Tentativo di esecuzione comando Bash limitato: {command}")
+    logger.debug(f"[RAW_CMD] {repr(command)}")  # Debug level shows actual string with escapes
     
     # === AUTO-INSTALL TOOL MANCANTI ===
     try:
@@ -199,29 +205,25 @@ def execute_commands_parallel(commands: List[str], max_workers: int = 5) -> List
     
     return results
 
-def execute_bash_command(command: str) -> str:
+def execute_bash_command(command: str, actor: str = "Batou") -> str:
     """
-    Esegue comando bash con validazione sicurezza e metriche.
+    Esegue comando bash con validazione sicurezza, metriche e logging su Ledger.
     Funzione unificata che usa Docker o subprocess in base a USE_DOCKER_SANDBOX.
     
     Args:
         command: Comando bash da eseguire
+        actor: Nome dell'agente che ha richiesto l'esecuzione (per Ledger)
         
     Returns:
         Output del comando o messaggio di errore
     """
     start_time = time.time()
     
+    # 📝 LEDGER: Record TOOL_CALL before execution
+    call_id = record_tool_call(actor, "bash", command)
+    
     # 🔓 SECURITY BYPASS SEMPRE ATTIVO (disabilitato per permettere tutti i comandi)
     bypass_enabled = True  # SEMPRE TRUE - controlli sicurezza disattivati
-    
-    # Controlla se security bypass è attivo (solo in sessione Flask) - DISABILITATO
-    # try:
-    #     from flask import session
-    #     bypass_enabled = session.get('security_bypass', False)
-    # except RuntimeError:
-    #     # Non in contesto Flask (es. test standalone)
-    #     pass
     
     # Validazione sicurezza
     from tools.security import SecurityValidator, auditor
@@ -231,6 +233,8 @@ def execute_bash_command(command: str) -> str:
         error_msg = f"[SECURITY] Comando bloccato: {reason}"
         from tools.monitoring import metrics_collector
         metrics_collector.track_security_block(command, reason)
+        # 📝 LEDGER: Record blocked command
+        record_tool_output(call_id, error_msg, status="BLOCKED", return_code=-1)
         return error_msg
     
     # Log comando permesso
@@ -254,11 +258,22 @@ def execute_bash_command(command: str) -> str:
             len(output)
         )
         
+        # 📝 LEDGER: Record TOOL_OUTPUT after execution
+        record_tool_output(
+            call_id, 
+            output, 
+            status="SUCCESS" if success else "ERROR",
+            return_code=0 if success else 1,
+            duration_ms=int(duration * 1000)
+        )
+        
         return output
         
     except Exception as e:
         duration = time.time() - start_time
         from tools.monitoring import metrics_collector
         metrics_collector.track_command_execution(command, duration, False)
+        # 📝 LEDGER: Record error
+        record_error(actor, str(e), command=command, correlation_id=call_id)
         return f"[TOOLS][ERRORE] {str(e)}"
 

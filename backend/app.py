@@ -18,7 +18,9 @@ from backend.agents.swarm import start_swarm_chat, start_section9_mission
 from backend.core import tools
 from backend.core.tools import generate_deep_steps, execute_step_by_step_streaming
 from backend.core.task_context_manager import get_task_context_manager
+from backend.core.task_context_manager import get_task_context_manager
 from backend.core.smart_context_builder import build_smart_context_for_execution
+import backend.core.arena_manager as arena_mgr # Arena Import
 
 import uuid
 from prometheus_client import Counter, Summary, generate_latest, CONTENT_TYPE_LATEST
@@ -616,7 +618,75 @@ def delete_chat_history():
         log_info(f"[ERRORE DELETE /chat_history]: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
+# ========== ARENA API ==========
+@app.route("/api/arena/start", methods=["POST"])
+def arena_start():
+    if arena_mgr.start_match_thread():
+        return jsonify({"status": "started", "message": "Arena avviata in background."})
+    else:
+        return jsonify({"status": "error", "message": "Arena già in esecuzione."}), 400
+
+@app.route("/api/arena/stop", methods=["POST"])
+def arena_stop():
+    arena_mgr.stop_match()
+    return jsonify({"status": "stopped", "message": "Arresto forzato inviato."})
+
+@app.route("/api/arena/status", methods=["GET"])
+def arena_status():
+    return jsonify({"status": arena_mgr.ARENA_STATUS})
+
+@app.route("/api/arena/stream")
+def arena_stream():
+    def event_stream():
+        while True:
+            try:
+                # Non-blocking get
+                msg = arena_mgr.ARENA_LOG_QUEUE.get(timeout=60)
+                yield f"data: {json.dumps(msg)}\n\n"
+            except:
+                yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+    return Response(event_stream(), mimetype="text/event-stream")
+
+# ========== PSYCHE API ==========
+from backend.core.psyche.neuro_system import get_psyche
+from backend.core.psyche.therapist import get_therapist
+
+@app.route("/api/psyche/state", methods=["GET"])
+def psyche_state():
+    """Get current psyche state (dopamine, cortisol, emotional state)."""
+    psyche = get_psyche()
+    state = psyche.get_emotional_state()
+    return jsonify(state)
+
+@app.route("/api/psyche/history", methods=["GET"])
+def psyche_history():
+    """Get therapy session history."""
+    import os
+    session_log_path = "data/session/therapy_log.json"
+    if os.path.exists(session_log_path):
+        with open(session_log_path, "r") as f:
+            sessions = json.load(f)
+        return jsonify({"sessions": sessions})
+    return jsonify({"sessions": []})
+
+@app.route("/api/psyche/adjust", methods=["POST"])
+def psyche_adjust():
+    """Manually adjust psyche (for testing)."""
+    data = request.json
+    psyche = get_psyche()
+    if data.get("stimulate"):
+        psyche.stimulate(float(data["stimulate"]))
+    if data.get("stress"):
+        psyche.stress(float(data["stress"]))
+    if data.get("decay"):
+        psyche.decay()
+    return jsonify(psyche.get_emotional_state())
+
 # ========== START ==========
 if __name__ == "__main__":
-    log_info("KaliAI pronto sulla porta 5000")
-    app.run(debug=True)
+    is_debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    # Security: bind to localhost only in debug mode
+    host = "127.0.0.1" if is_debug else os.getenv("FLASK_HOST", "0.0.0.0")
+    port = int(os.getenv("FLASK_PORT", 5000))
+    log_info(f"KaliAI pronto su {host}:{port} (debug={is_debug})")
+    app.run(host=host, port=port, debug=is_debug)

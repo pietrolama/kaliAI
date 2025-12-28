@@ -4,16 +4,28 @@ Task Context Manager - Gestisce la persistenza del contesto dei task
 """
 import uuid
 import logging
+import os
+import re
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 
 logger = logging.getLogger('TaskContextManager')
+
+# Execution modes - determines operational behavior
+class ExecutionMode:
+    SELF_ANALYSIS = "SELF_ANALYSIS"    # Analyzing own codebase/files
+    LOCAL_HOST = "LOCAL_HOST"          # Operating on local filesystem
+    REMOTE_TARGET = "REMOTE_TARGET"    # Pentesting remote target
+    ARENA = "ARENA"                    # Controlled arena environment
 
 class TaskContextManager:
     """
     Gestisce la cache dei contesti dei task in memoria.
     Ogni task ha un ID univoco e mantiene tutto il contesto dell'esecuzione.
     """
+    
+    # Project root for self-analysis detection
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     
     def __init__(self, ttl_hours: int = 24):
         """
@@ -23,24 +35,88 @@ class TaskContextManager:
         self.task_cache: Dict[str, Dict[str, Any]] = {}
         self.ttl_hours = ttl_hours
     
-    def create_task(self, prompt: str, objective_analysis: Optional[Dict] = None) -> str:
+    def _detect_mode(self, prompt: str) -> tuple:
+        """
+        Auto-detect execution mode from prompt content.
+        
+        Returns:
+            (mode, root_path, target_type)
+        """
+        prompt_lower = prompt.lower()
+        
+        # Patterns that indicate self-analysis
+        self_analysis_patterns = [
+            r"backend/",
+            r"frontend/",
+            r"kaliAI",
+            r"python_sandbox",
+            r"swarm\.py",
+            r"app\.py",
+            r"nostro|proprio|questo progetto",
+            r"analizza.*codice",
+            r"file.*locale",
+        ]
+        
+        for pattern in self_analysis_patterns:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                return (ExecutionMode.SELF_ANALYSIS, self.PROJECT_ROOT, "LOCAL_FILE")
+        
+        # Patterns that indicate remote target
+        remote_patterns = [
+            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}",  # IP address
+            r"target",
+            r"scansiona",
+            r"exploit",
+            r"penetration",
+            r"attacco",
+        ]
+        
+        for pattern in remote_patterns:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                return (ExecutionMode.REMOTE_TARGET, None, "REMOTE_HOST")
+        
+        # Default to local host for file system tasks
+        if any(word in prompt_lower for word in ["file", "directory", "trova", "cerca", "ls", "find"]):
+            return (ExecutionMode.LOCAL_HOST, "/home", "LOCAL_FS")
+        
+        # Default
+        return (ExecutionMode.LOCAL_HOST, self.PROJECT_ROOT, "UNKNOWN")
+    
+    def create_task(self, prompt: str, objective_analysis: Optional[Dict] = None, 
+                   mode: Optional[str] = None) -> str:
         """
         Crea un nuovo task e restituisce il task-id.
         
         Args:
             prompt: Prompt originale dell'utente
             objective_analysis: Analisi dell'obiettivo (se disponibile)
+            mode: Override manuale del modo di esecuzione
             
         Returns:
             task_id: ID univoco del task
         """
         task_id = f"task-{uuid.uuid4().hex[:12]}"
         
+        # Auto-detect or use provided mode
+        if mode:
+            detected_mode = mode
+            root_path = self.PROJECT_ROOT if mode == ExecutionMode.SELF_ANALYSIS else None
+            target_type = "MANUAL_OVERRIDE"
+        else:
+            detected_mode, root_path, target_type = self._detect_mode(prompt)
+        
+        logger.info(f"[TASK-CONTEXT] Mode detected: {detected_mode} (target: {target_type})")
+        
         self.task_cache[task_id] = {
             "task_id": task_id,
             "created_at": datetime.now(),
             "prompt": prompt,
             "objective_analysis": objective_analysis or {},
+            # NEW: Execution context
+            "execution_mode": detected_mode,
+            "root_path": root_path,
+            "target_type": target_type,
+            # Existing fields
             "target_ip": None,
             "confirmed_target_ip": None,
             "steps": [],
