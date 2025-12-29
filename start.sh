@@ -26,6 +26,12 @@ export PYTHONPATH=$PYTHONPATH:.
 export FLASK_DEBUG=true  # Enable debug mode (binds to 127.0.0.1 only)
 export PYTHONUNBUFFERED=1  # Force real-time log output (no buffering)
 
+# Security Level: safe | lab | unrestricted
+# - safe: Solo scan passivi, whitelist rigorosa, no tool offensivi
+# - lab: Attacchi permessi, ma SOLO su IP in whitelist (reti private)
+# - unrestricted: Nessun limite (pericoloso!)
+export KALIAI_SECURITY_LEVEL=lab
+
 # Banner
 echo "============================================================================="
 echo "   _____ ______ _____ _______ _____ ____  _   _    ___  "

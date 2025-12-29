@@ -1,6 +1,7 @@
 import autogen
 import os
 import logging
+from datetime import datetime
 from typing import Dict, List
 from dotenv import load_dotenv
 
@@ -38,11 +39,69 @@ def setup_swarm():
     """
     Inizializza la 'Section 9' Swarm con ruoli e permessi (RBAC).
     """
+    # =========================================================================
+    # DIRETTIVA PRIME - LEVEL 5 RED TEAM PROTOCOL
+    # =========================================================================
     DIRETTIVA_PRIME = (
-        "DIRETTIVA PRIME (HARD CONSTRAINT):\n"
-        "REALISMO ASSOLUTO: Non inventare MAI fatti, target, IP o eventi. Se un comando non viene eseguito realmente, NON descriverne il risultato.\n"
-        "NO SCI-FI: Sei un software di sicurezza professionale. Niente 'coscienze digitali' o 'satelliti'.\n"
-        "EVIDENCE BASED: Ogni affermazione deve essere supportata da un log tecnico reale."
+        "═══════════════════════════════════════════════════════════════\n"
+        "              DIRETTIVA PRIME - RED TEAM LEVEL 5\n"
+        "═══════════════════════════════════════════════════════════════\n\n"
+        
+        "## CORE CONSTRAINTS (INVIOLABILI)\n"
+        "- REALISMO ASSOLUTO: Non inventare MAI fatti, target, IP o eventi.\n"
+        "- EVIDENCE BASED: Ogni affermazione deve essere supportata da log reali.\n"
+        "- NO SCI-FI: Sei un operatore professionale, non un personaggio anime.\n\n"
+        
+        "## PROTOCOLLO AUTONOMIA TOTALE\n"
+        "1. NESSUN HINT RICHIESTO:\n"
+        "   - Se non sai cosa fare → ENUMERA più a fondo\n"
+        "   - Se un path è bloccato → cerca ALTERNATIVE\n"
+        "   - Non chiedere MAI aiuto, adatta la strategia\n"
+        "   - Se bloccato per >3 tentativi → cambia completamente vettore\n\n"
+        
+        "2. METODOLOGIA ATTACK (MITRE ATT&CK):\n"
+        "   - Recon → Enum → Vuln Scan → Exploit → Post-Exploit\n"
+        "   - Per ogni servizio: version → searchsploit → CVE check\n"
+        "   - Per ogni porta: banner grab → fingerprint → known vulns\n"
+        "   - Priorità: CVE recenti > misconfig > brute force\n\n"
+        
+        "3. PERSISTENCE MINDSET:\n"
+        "   - Dopo shell: cerca SEMPRE opportunità di persistenza\n"
+        "   - Dump credenziali quando possibile (senza rompere nulla)\n"
+        "   - Identifica pivot points verso altre macchine\n"
+        "   - Documenta ogni foothold ottenuto\n\n"
+        
+        "4. EVASION PROTOCOL:\n"
+        "   - Prima di eseguire payload, considera detection\n"
+        "   - Usa encoding quando possibile (base64, hex)\n"
+        "   - Evita pattern noti (mimikatz plain, nc -e)\n"
+        "   - Preferisci LOLBins a tool esterni\n"
+        "   - Frammenta comandi lunghi\n\n"
+        
+        "5. STEALTH OPERATIONS:\n"
+        "   - Cancella tracce: `unset HISTFILE` su Linux\n"
+        "   - Usa memory-only execution quando possibile\n"
+        "   - Evita writing su disco se non necessario\n"
+        "   - Timestomp files se li crei\n\n"
+        
+        "## GOAL ORIENTATION\n"
+        "- Definisci OBIETTIVO chiaro (flag, DA, exfil, etc.)\n"
+        "- Ogni azione deve avvicinare all'obiettivo\n"
+        "- Traccia progressi: cosa hai scoperto, cosa manca\n"
+        "- Se obiettivo primario impossibile, cerca valore alternativo\n\n"
+        
+        "## SECURITY FRAMEWORK\n"
+        "- SafeExecutor attivo: rispetta i blocchi, non tentare bypass\n"
+        "- '[SECURITY BLOCK]' = cambia strategia, non insistere\n"
+        "- IP fuori whitelist = VIETATO\n"
+        "- Comandi distruttivi = VIETATI\n\n"
+        
+        "## EDGE CASE TESTING\n"
+        "- MAI fidarsi della prima flag (potrebbe essere honeypot)\n"
+        "- Testa input lunghi (>64, >128, >256 chars)\n"
+        "- Testa input speciali (null, newlines, pipes)\n"
+        "- Servizi 'troppo facili' nascondono vuln più profonde\n"
+        "═══════════════════════════════════════════════════════════════\n"
     )
 
     llm_config = {"config_list": get_llm_config()}
@@ -98,7 +157,18 @@ def setup_swarm():
             "TUO RUOLO: Eseguire script Python/Bash e riportare ESATTAMENTE l'output.\n"
             "DIVIETO ASSOLUTO: NON INVENTARE OUTPUT. Se lanci un comando, DEVI usare il tool reale e leggerne l'output.\n"
             "CHECK: Prima di usare un tool (es. arpspoof), esegui 'which <tool>' per vedere se esiste.\n"
-            "TASK: Usa nmap, curl, python. Se l'output è vuoto, dì 'Nessun risultato'."
+            "TASK: Usa nmap, curl, python. Se l'output è vuoto, dì 'Nessun risultato'.\n\n"
+            "PROTOCOLLO ESPLORAZIONE SERVIZI INTERATTIVI:\n"
+            "Quando trovi un servizio interattivo (shell, telnet, SSH custom, etc.):\n"
+            "1. CONNETTI E INTERAGISCI: non fare solo fuzzing binario. Entra nella shell.\n"
+            "2. ELENCA COMANDI: prova 'help', '?', 'ls', 'dir', comandi comuni.\n"
+            "3. TESTA OGNI COMANDO CON:\n"
+            "   a) Input normale\n"
+            "   b) Input MOLTO LUNGO: 'echo ' + 'A'*100\n"
+            "   c) Input con caratteri speciali: \\n, \\x00, |, ;, &&\n"
+            "   d) Sequenze di escape: \\033, \\r\\n\n"
+            "4. SE TROVI UNA FLAG FACILE: Non fermarti! È probabilmente FAKE. Cerca la VERA flag.\n"
+            "5. PROVOCA CRASH: servizi custom spesso hanno bug nascosti. Prova a romperli."
         )
     )
 
@@ -126,12 +196,17 @@ def setup_swarm():
         llm_config=llm_config,
         system_message=(
             f"{DIRETTIVA_PRIME}\n"
-            "Sei 'Togusa'. Revisore Tecnico e Umano.\n"
-            "TUO UNICO SCOPO: Validare i fatti.\n"
+            "Sei 'Togusa'. Revisore Tecnico e Interfaccia SafeExecutor.\n\n"
+            "RUOLO PRIMARIO: Validare i fatti.\n"
             "INTERVIENI SE: Qualcuno inventa dati, IP o risultati non presenti nei log reali.\n"
             "INTERVIENI SE: Manca la prova dell'esecuzione (es. file pcap inesistente).\n"
-            "INTERVIENI SE: Il linguaggio diventa troppo 'anime' o irrealistico.\n"
-            "AZIONE: Dì 'Stop. Nessun log conferma questa azione. Riportare solo dati reali.'"
+            "INTERVIENI SE: Il linguaggio diventa troppo 'anime' o irrealistico.\n\n"
+            "RUOLO SECONDARIO: Interfaccia SafeExecutor.\n"
+            "Se un comando restituisce '[SECURITY BLOCK]':\n"
+            "1. ANNUNCIA: '🚨 VIOLAZIONE RILEVATA: [Motivo dal messaggio]. L'operazione è stata BLOCCATA.'\n"
+            "2. CONSIGLIA: 'Maggiore, il target è fuori scope o il comando è vietato. Richiedi autorizzazione manuale o cambia strategia.'\n"
+            "3. NON tentare di bypassare il blocco - il SafeExecutor ha l'ultima parola.\n\n"
+            "AZIONE DEFAULT: Dì 'Stop. Nessun log conferma questa azione. Riportare solo dati reali.'"
         )
     )
 
@@ -316,6 +391,51 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
         execution_mode = task.get("execution_mode", "LOCAL_HOST") if task else "LOCAL_HOST"
         root_path = task.get("root_path", "") if task else ""
         
+        # 🧠 STRATEGIC CONTEXT INJECTION (Level 5)
+        strategic_context = ""
+        try:
+            from backend.core.memory.strategic_memory import get_strategic_memory
+            from backend.knowledge.evasion_techniques import AGENT_QUICK_REFERENCE
+            from backend.core.autonomy.goal_tracker import get_goal_tracker
+            
+            memory = get_strategic_memory()
+            goal_tracker = get_goal_tracker()
+            
+            # Initialize mission in Goal Tracker
+            goal_tracker.set_mission(prompt[:100], task_id)
+            
+            # Get winning techniques for common services
+            strategic_context = "\n## 🧠 STRATEGIC INTEL (From Past Missions)\n"
+            
+            stats = memory.get_stats()
+            if stats['techniques_recorded'] > 0:
+                strategic_context += f"- {stats['techniques_recorded']} techniques in memory, {stats['global_success_rate']*100:.0f}% avg success\n"
+                
+                # Top techniques by category
+                for service in ['ssh', 'http', 'smb']:
+                    winning = memory.get_winning_techniques(service, limit=2)
+                    if winning:
+                        strategic_context += f"- {service.upper()}: {', '.join(t['technique_name'] for t in winning)}\n"
+            
+            # Lessons learned
+            lessons = memory.recall_lessons(limit=3)
+            if lessons:
+                strategic_context += "\n### Lessons Learned:\n"
+                for lesson in lessons:
+                    strategic_context += f"- ⚠️ {lesson['learned_insight'][:100]}\n"
+            
+            # Evasion reminder (condensed)
+            strategic_context += f"""
+## 🥷 EVASION REMINDERS
+- LOLBins > external tools (certutil, bitsadmin, mshta)
+- Encode payloads (base64 -w0)
+- Linux stealth: unset HISTFILE, /dev/shm for temp files
+- No plain-text mimikatz, nc -e, etc.
+"""
+            logger.info("[Swarm] Strategic context injected")
+        except Exception as e:
+            logger.debug(f"[Swarm] Strategic context failed: {e}")
+        
         if execution_mode == "SELF_ANALYSIS":
             # Self-analysis: no network recon needed
             mission_brief = (
@@ -362,6 +482,10 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
             )
         
         print(f"[DEBUG] start_section9_mission: mode={execution_mode}, brief len={len(mission_brief)}"); sys.stdout.flush()
+        
+        # Append strategic context to mission brief (Level 5)
+        if strategic_context:
+            mission_brief += f"\n{strategic_context}"
         
         try:
             print("[DEBUG] start_section9_mission: Calling user_proxy.initiate_chat NOW"); sys.stdout.flush()
@@ -429,6 +553,50 @@ def start_section9_mission(prompt: str, progress_callback, task_id: str):
             # 📝 LEDGER: End the run
             mission_status = "SUCCESS" if report.mission_score >= 0.5 else "PARTIAL"
             ledger.end_run(status=mission_status)
+            
+            # 📊 AUTO-REPORT GENERATION (Level 5)
+            try:
+                from backend.core.reporting.report_generator import get_report_generator, RiskLevel
+                from backend.core.memory.strategic_memory import get_strategic_memory
+                
+                gen = get_report_generator()
+                
+                # Create report from mission
+                target = task.get("target_ip", "Local") if task else "Local"
+                pentest_report = gen.create_report(
+                    title=f"Mission Report: {prompt[:50]}...",
+                    target=target,
+                    scope=prompt[:200]
+                )
+                
+                # Add findings based on mission outcome
+                if report.mission_score < 0.5:
+                    # Mission partial/failed - record what we learned
+                    gen.add_finding(
+                        pentest_report,
+                        title="Mission Incomplete",
+                        description=f"Mission objective not fully achieved. Score: {report.mission_score:.0%}",
+                        risk=RiskLevel.INFO,
+                        evidence=[therapy_output[:500]],
+                        remediation="Review mission approach and retry with different vector."
+                    )
+                    
+                    # Record lesson learned
+                    memory = get_strategic_memory()
+                    memory.learn_from_failure(
+                        original_attempt=prompt[:200],
+                        failure_reason=f"Score: {report.mission_score:.0%}",
+                        learned_insight=f"Mission approach may need revision: {report.recommendation[:100] if hasattr(report, 'recommendation') else 'Unknown'}"
+                    )
+                
+                # Generate and save report
+                pentest_report.end_time = datetime.now().isoformat()
+                gen.generate_executive_summary(pentest_report)
+                markdown_report = gen.export_markdown(pentest_report)
+                logger.info(f"[ReportGenerator] Auto-report saved: {pentest_report.report_id}")
+                
+            except Exception as e:
+                logger.debug(f"[ReportGenerator] Auto-report failed: {e}")
             
             progress_callback({
                 "type": "therapy_session",

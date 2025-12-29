@@ -223,23 +223,50 @@ def execute_bash_command(command: str, actor: str = "Batou") -> str:
     # 📝 LEDGER: Record TOOL_CALL before execution
     call_id = record_tool_call(actor, "bash", command)
     
-    # 🔓 SECURITY BYPASS SEMPRE ATTIVO (disabilitato per permettere tutti i comandi)
-    bypass_enabled = True  # SEMPRE TRUE - controlli sicurezza disattivati
+    # 🔒 NEW SECURITY LAYER (SafeExecutor) - DENY-WINS
+    new_security_validated = False
+    try:
+        from backend.config.security import (
+            full_security_check, 
+            log_security_event,
+            CURRENT_SECURITY_LEVEL,
+            SecurityLevel
+        )
+        
+        is_safe, reason = full_security_check(command)
+        
+        if not is_safe:
+            log_security_event("VIOLATION", command, reason, blocked=True)
+            error_msg = f"[SECURITY BLOCK] {reason}"
+            logger.warning(f"[Security] 🚫 BLOCKED: {command[:50]}... - {reason}")
+            record_tool_output(call_id, error_msg, status="BLOCKED", return_code=-1)
+            return error_msg
+        
+        # New security layer validated successfully
+        new_security_validated = True
+        log_security_event("EXECUTE", command, f"Approved ({actor})", blocked=False)
+        level_str = CURRENT_SECURITY_LEVEL.value.upper()
+        logger.info(f"[Security] ⚠️ SECURITY PROFILE: {level_str} for: {command[:50]}")
+        
+    except ImportError:
+        # Fallback al vecchio sistema se nuovo non disponibile
+        logger.warning("[Security] SafeExecutor not available, using legacy security")
     
-    # Validazione sicurezza
-    from tools.security import SecurityValidator, auditor
-    is_valid, reason = SecurityValidator.validate_command(command, bypass=bypass_enabled)
-    if not is_valid:
-        auditor.log_blocked(command, reason)
-        error_msg = f"[SECURITY] Comando bloccato: {reason}"
-        from tools.monitoring import metrics_collector
-        metrics_collector.track_security_block(command, reason)
-        # 📝 LEDGER: Record blocked command
-        record_tool_output(call_id, error_msg, status="BLOCKED", return_code=-1)
-        return error_msg
-    
-    # Log comando permesso
-    auditor.log_allowed(command)
+    # 🔓 LEGACY SECURITY (skip if new system already validated)
+    if not new_security_validated:
+        from tools.security import SecurityValidator, auditor
+        bypass_enabled = True  # Bypass legacy - usiamo il nuovo sistema sopra
+        is_valid, reason = SecurityValidator.validate_command(command, bypass=bypass_enabled)
+        if not is_valid:
+            auditor.log_blocked(command, reason)
+            error_msg = f"[SECURITY] Comando bloccato: {reason}"
+            from tools.monitoring import metrics_collector
+            metrics_collector.track_security_block(command, reason)
+            record_tool_output(call_id, error_msg, status="BLOCKED", return_code=-1)
+            return error_msg
+        
+        # Log comando permesso (solo se legacy è attivo)
+        auditor.log_allowed(command)
     
     # Esegui
     try:
@@ -258,6 +285,47 @@ def execute_bash_command(command: str, actor: str = "Batou") -> str:
             success,
             len(output)
         )
+        
+        # 🧠 STRATEGIC MEMORY: Track technique for cross-session learning
+        try:
+            from backend.core.memory.strategic_memory import get_strategic_memory
+            memory = get_strategic_memory()
+            
+            # Extract technique info from command
+            first_word = command.split()[0].split('/')[-1] if command.strip() else "unknown"
+            
+            # Try to extract target service/port
+            target_service = "unknown"
+            target_port = 0
+            
+            # Common patterns
+            if "ssh" in command.lower():
+                target_service = "ssh"
+                target_port = 22
+            elif "http" in command.lower() or "curl" in command.lower() or "wget" in command.lower():
+                target_service = "http"
+                target_port = 80
+            elif "smb" in command.lower() or "445" in command:
+                target_service = "smb"
+                target_port = 445
+            elif "ftp" in command.lower():
+                target_service = "ftp"
+                target_port = 21
+            elif "nmap" in command.lower():
+                target_service = "recon"
+            
+            memory.remember_technique(
+                technique_id=first_word,
+                technique_name=first_word.capitalize(),
+                mitre_id="",  # Could be enhanced with mapping
+                target_service=target_service,
+                target_port=target_port,
+                success=success,
+                output_summary=output[:200] if success else "",
+                context={"actor": actor, "full_command": command[:100]}
+            )
+        except Exception as e:
+            logger.debug(f"[StrategicMemory] Could not record: {e}")
         
         # 📝 LEDGER: Record TOOL_OUTPUT after execution
         record_tool_output(
