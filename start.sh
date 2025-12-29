@@ -1,6 +1,26 @@
 #!/bin/bash
 
+# ============================================================================
+# PERSISTENT LOGGING SETUP
+# ============================================================================
+LOG_DIR="$HOME/kaliAI/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/session_$(date +%Y%m%d_%H%M%S).log"
+LATEST_LOG="$LOG_DIR/latest.log"
+
+# Redirect all output to both terminal AND log file
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# Create symlink to latest log
+ln -sf "$LOG_FILE" "$LATEST_LOG"
+
+echo "[LOG] Session started: $(date)"
+echo "[LOG] Log file: $LOG_FILE"
+echo ""
+
+# ============================================================================
 # Configuration
+# ============================================================================
 export PATH=$PATH:$HOME/.local/bin
 export PYTHONPATH=$PYTHONPATH:.
 export FLASK_DEBUG=true  # Enable debug mode (binds to 127.0.0.1 only)
@@ -65,4 +85,8 @@ export $(grep -v '^#' .env | xargs)
 
 # 7. Start
 echo "[*] Initializing GhostBrain Core..."
+echo "[LOG] Flask starting at $(date)"
 python3 -u run.py  # -u: unbuffered output for real-time logs
+
+# Log session end
+echo "[LOG] Session ended: $(date)"

@@ -9,7 +9,13 @@ RUN apt-get update && apt-get install -y \
     iproute2 \
     dnsutils \
     iputils-ping \
+    hydra \
+    sshpass \
+    telnet \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure nmap is in PATH
+ENV PATH="/usr/bin:/usr/sbin:$PATH"
 
 # Mantiene il container vivo
 CMD ["tail", "-f", "/dev/null"]

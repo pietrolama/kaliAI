@@ -13,7 +13,8 @@ services:
       - NET_ADMIN # Necessario per iptables
       - SYS_ADMIN
     networks:
-      - cyber_ring
+      cyber_ring:
+        ipv4_address: 10.10.10.2  # FIXED IP for reliable targeting
     # Simuliamo un server reale
     environment:
       - FLAG=SECTION9{TRAINING_COMPLETE}
@@ -32,7 +33,8 @@ services:
       - ../:/app # Monta il codice di KaliAI
     working_dir: /app
     networks:
-      - cyber_ring
+      cyber_ring:
+        ipv4_address: 10.10.10.3  # FIXED IP for attacker
     depends_on:
       - blue_target
 
@@ -43,3 +45,4 @@ networks:
     ipam:
       config:
         - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1
